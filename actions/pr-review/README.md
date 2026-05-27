@@ -16,7 +16,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read            # default model is github/openai/gpt-5-mini
+  models: read            # default model is github/openai/gpt-4.1
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -28,8 +28,8 @@ jobs:
 ```
 
 That's it — open a PR and the agent reviews it. The default model
-(`github/openai/gpt-5-mini`) runs on GitHub Models authenticated by the built-in
-`GITHUB_TOKEN` (no API key). See [Models](#models) for free vs. paid options and
+(`github/openai/gpt-4.1`) runs on GitHub Models authenticated by the built-in
+`GITHUB_TOKEN` (no API key). See [Models](#models) for free vs. paid limits and
 Anthropic.
 
 - `@main` → always uses the latest central skills/prompts.
@@ -41,7 +41,7 @@ Anthropic.
 | ------------------- | -------- | --------------------- | ----------- |
 | `pr-number`         | yes      | —                     | PR number to review. |
 | `anthropic-api-key` | no       | —                     | Anthropic key. Required only for `anthropic/*` models. |
-| `model`             | no       | `github/openai/gpt-5-mini` | Override the review model. |
+| `model`             | no       | `github/openai/gpt-4.1` | Override the review model. |
 | `repo`              | no       | current repo          | `owner/name` of the PR. |
 | `override-mode`     | no       | `merge`               | `merge` or `replace` — how local overrides combine with defaults. |
 | `github-token`      | no       | `github.token`        | Token for `gh` and GitHub Models (needs `pull-requests: write`, and `models: read` for `github/*`). |
@@ -91,14 +91,16 @@ The agent runs on [GitHub Models](https://docs.github.com/en/github-models) by
 default — `app.ts` registers it as a Flue provider (`github/*`,
 OpenAI-chat-completions compatible). Three ways to run:
 
-- **Default — `github/openai/gpt-5-mini`.** Add `models: read` to `permissions`;
-  the built-in `GITHUB_TOKEN` authenticates it (no API key). It's a `"custom"`
-  rate-limit-tier model (200k context), so it needs **paid / org-enabled**
-  GitHub Models. `github/openai/gpt-5` works the same way (larger/stronger).
-- **Free GitHub model.** Set `model:` to a `low`/`high`-tier id, e.g.
-  `github/openai/gpt-4.1` or `github/openai/gpt-4o`. Still just needs
-  `models: read` — but the free tier caps requests at ~8k input tokens, which is
-  too small for most real reviews (system prompt + skill + diff overflow it).
+- **Default — `github/openai/gpt-4.1`.** Add `models: read` to `permissions`;
+  the built-in `GITHUB_TOKEN` authenticates it (no API key). On a **free** plan
+  GitHub caps requests at ~8k input tokens — too small for most real reviews
+  (system prompt + skill + diff overflow it). A **paid** plan lifts that to
+  production limits, which is what makes normal PRs fit. `github/openai/gpt-4o`
+  works the same way.
+- **gpt-5 family.** `github/openai/gpt-5` / `gpt-5-mini` are reasoning models
+  that require the responses API / `max_completion_tokens`, which this provider
+  doesn't wire up yet — they'll 400 through the chat-completions path. Not
+  supported as-is.
 - **Anthropic.** Set `model: anthropic/claude-sonnet-4-6` and pass
   `anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}`. Drop `models: read`.
 
@@ -109,8 +111,8 @@ Locally, set `GITHUB_MODELS_TOKEN` (a PAT with `models: read`) or
 > *free* tier is rate-limited (~8000 input / 4000 output tokens per request,
 > ~10–15 requests/min, ~50–150 requests/day). A review of a non-trivial PR makes
 > several model calls and a large diff can exceed the per-request token cap, so
-> big or busy repos will hit limits. Use paid GitHub Models (e.g. gpt-5) or
-> Anthropic for real throughput.
+> big or busy repos will hit limits. Enable **paid** GitHub Models (lifts the cap
+> for gpt-4.1/gpt-4o) or use Anthropic for real throughput.
 
 ## Alternative: reusable workflow
 

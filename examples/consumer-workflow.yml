@@ -1,11 +1,11 @@
 # Copy this into a consuming repo as `.github/workflows/pr-review.yml`.
 # Replace <owner> with the org/user that hosts the agents repo.
 #
-# Default model is github/openai/gpt-5-mini via GitHub Models — the built-in
+# Default model is github/openai/gpt-4.1 via GitHub Models — the built-in
 # GITHUB_TOKEN authenticates it, so no API key is needed, but the token needs
-# `models: read` (below) and paid/enabled GitHub Models ("custom" tier). For a
-# free model use `model: github/openai/gpt-4.1` (note its ~8k token cap), or see
-# the Anthropic block at the bottom.
+# `models: read` (below). On a free plan it's capped at ~8k tokens/request
+# (too small for big diffs); a paid plan lifts that. To use Anthropic instead,
+# see the block at the bottom.
 name: PR Review
 
 on:
@@ -28,8 +28,7 @@ jobs:
         with:
           pr-number: ${{ github.event.pull_request.number }}
           # Optional:
-          # model: github/openai/gpt-5     # larger/stronger, also paid
-          # model: github/openai/gpt-4.1   # free tier, ~8k token cap
+          # model: github/openai/gpt-4o    # another GitHub model
           # override-mode: merge           # or: replace
 
       # --- Or review with Anthropic instead of GitHub Models -----------------
