@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["workflows/**/*.ts", "personas/**/*.ts", "flue-env.d.ts"]
+  "include": ["workflows/**/*.ts", "personas/**/*.ts", "app.ts", "flue.config.ts", "flue-env.d.ts"]
 }

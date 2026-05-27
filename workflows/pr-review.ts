@@ -22,7 +22,10 @@ const agent = createAgent(() => ({
   // checked-out repo plus `gh`, `git`, etc. Flue auto-discovers AGENTS.md and
   // the skills in this project from the project root.
   sandbox: local(),
-  model: 'anthropic/claude-sonnet-4-6',
+  // Free GitHub Models default (registered in app.ts). gpt-4.1 is the strongest
+  // free-tier coding model. Override per run with REVIEW_MODEL, e.g.
+  // REVIEW_MODEL=github/openai/gpt-5 or anthropic/claude-sonnet-4-6.
+  model: 'github/openai/gpt-4.1',
   // Global skills — applied to every PR.
   skills: [codeReview],
   // Global personas — focused subagents the review can delegate to.

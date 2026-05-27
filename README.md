@@ -21,6 +21,7 @@ agents/                       # pnpm workspace root (room for more agents later)
     pr-review/action.yml      # composite action consuming repos use
   examples/
     consumer-workflow.yml     # copy-paste workflow for a consuming repo
+  app.ts                      # runtime entry: registers model providers (incl. GitHub Models)
   flue.config.ts              # default target (node)
   .github/workflows/
     pr-review.yml             # dogfoods the action on this repo's PRs
@@ -54,6 +55,18 @@ registered in `createAgent({ subagents: [...] })` and invoked with
 personas (that exists only for skills), so each persona is a small TS module in
 `personas/` exported through `personas/index.ts`. Add one and add it to that
 array.
+
+## Models
+
+Default: **`github/openai/gpt-4.1`** via [GitHub Models](https://docs.github.com/en/github-models)
+free tier (registered in `app.ts`), authenticated by a GitHub token with
+`models: read` — no Anthropic key. The free tier is rate-limited (~8k input /
+4k out per request), so very large diffs may get truncated; fine for most PRs.
+
+Override per run with `REVIEW_MODEL` (locally) or the action's `model` input
+(CI): `github/openai/gpt-5` (paid `"custom"` tier, stronger) or
+`anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`). See
+[`actions/pr-review/README.md`](actions/pr-review/README.md#models).
 
 ## Use it in other repos
 

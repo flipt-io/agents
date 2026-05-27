@@ -11,10 +11,11 @@ inputs:
     required: false
     default: ${{ github.repository }}
   anthropic-api-key:
-    description: 'Anthropic API key for the review model.'
-    required: true
+    description: 'Anthropic API key. Required for anthropic/* models; leave empty when using a github/* model.'
+    required: false
+    default: ''
   model:
-    description: 'Override the review model (e.g. anthropic/claude-opus-4-7). Defaults to the agent default.'
+    description: 'Override the review model (e.g. anthropic/claude-opus-4-7, or github/openai/gpt-4o for GitHub Models). Defaults to the agent default.'
     required: false
     default: ''
   override-mode:
