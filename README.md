@@ -1,0 +1,102 @@
+# PR Review Agent
+
+A [Flue](https://flueframework.com) agent that reviews pull requests using
+**globally-configured skills and prompts** — they apply to every PR, not per
+invocation. Built to run in GitHub Actions on `anthropic/claude-sonnet-4-6`.
+
+## Layout
+
+```
+agents/                       # pnpm workspace root (room for more agents later)
+  workflows/
+    pr-review.ts              # the agent: registers globals, reviews one PR
+  skills/
+    code-review/SKILL.md      # GLOBAL skill — the review methodology
+  prompts/
+    *.md                      # GLOBAL prompts — review priorities, drop-in
+  personas/
+    *.ts                      # GLOBAL subagents the review can delegate to
+  AGENTS.md                   # docs for agents working ON this repo (not the reviewer's persona)
+  actions/
+    pr-review/action.yml      # composite action consuming repos use
+  examples/
+    consumer-workflow.yml     # copy-paste workflow for a consuming repo
+  flue.config.ts              # default target (node)
+  .github/workflows/
+    pr-review.yml             # dogfoods the action on this repo's PRs
+```
+
+## How "global" works
+
+- **Skills** are registered on the agent in `createAgent({ skills: [...] })`, so
+  they are part of the agent, not the payload. Add one: drop
+  `skills/<name>/SKILL.md`, import it in `workflows/pr-review.ts`, add it to the
+  `skills` array.
+- **Prompts** in `prompts/*.md` are read by the `code-review` skill on every run
+  (filename order). Drop a file in — it applies to the next PR, no code change.
+- **Personas** in `personas/*.ts` are registered as `subagents`, so the reviewer
+  can delegate focused deep-dives (`security`, `correctness`, …) on any PR.
+- **The reviewer's persona and standing rules** live in
+  `skills/code-review/SKILL.md` — that skill *is* the agent's behavior.
+- **AGENTS.md** documents *this repo* for any coding agent working on it. Flue
+  auto-discovers it at runtime, so the review process keeps project context, but
+  it is not the reviewer's persona. Per-review context about the code being
+  reviewed comes from the *target* repo's own `AGENTS.md`.
+
+The payload only ever carries *which* PR to review (`prNumber`, optional
+`repo`) — never the skills or prompts.
+
+## Subagents / personas
+
+Flue supports subagents via `defineAgentProfile({ name, instructions })`,
+registered in `createAgent({ subagents: [...] })` and invoked with
+`session.task(text, { agent: 'name' })`. There is no markdown auto-discovery for
+personas (that exists only for skills), so each persona is a small TS module in
+`personas/` exported through `personas/index.ts`. Add one and add it to that
+array.
+
+## Use it in other repos
+
+Consuming repos opt in with a small workflow that calls the composite action;
+the review logic, skills, and prompts stay centralized here. See
+[`actions/pr-review/README.md`](actions/pr-review/README.md) and
+[`examples/consumer-workflow.yml`](examples/consumer-workflow.yml).
+
+```yaml
+# .github/workflows/pr-review.yml in the consuming repo
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: <owner>/agents/actions/pr-review@main   # @main = always-latest; pin @v1 for reproducible
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+### Per-repo overrides
+
+A consuming repo can tailor reviews with a `.flue/` directory at its root
+(`prompts/`, `skills/`, `personas/`, `AGENTS.md`) — the canonical Flue source
+dir, so it can hold overrides for every fleet agent, not just this one. The
+`override-mode` input controls whether those `merge` with the central defaults
+(default) or `replace` them. Full details in
+[`actions/pr-review/README.md`](actions/pr-review/README.md).
+
+## Run it locally
+
+```bash
+cp .env.example .env        # add ANTHROPIC_API_KEY and a GH_TOKEN
+pnpm install
+pnpm exec flue run pr-review --payload '{"prNumber": 123, "repo": "owner/name"}'
+```
+
+`flue run` builds the project, invokes the workflow, and prints the structured
+verdict as JSON.
+
+## Adding more agents
+
+Either add another file under `workflows/` (shares these globals, one build /
+deploy), or promote agents into isolated packages under `packages/*` and list
+them in `pnpm-workspace.yaml` for independent deploys.

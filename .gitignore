@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.flue/
+*.log
+
+# Local secrets — never commit. See .env.example.
+.env
+.env.*
+!.env.example
+.dev.vars
+
+.claude
