@@ -1,0 +1,22 @@
+{
+  "name": "@agents/pr-reviewer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Flue code-review agent. Reviews pull requests using globally-configured skills and prompts.",
+  "scripts": {
+    "dev": "flue dev",
+    "build": "flue build",
+    "review": "flue run pr-review"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@flue/runtime": "^0.8.0",
+    "valibot": "^1.4.1"
+  },
+  "devDependencies": {
+    "@flue/cli": "^0.8.0"
+  }
+}

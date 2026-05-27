@@ -1,0 +1,68 @@
+name: 'Flue PR Review'
+description: 'AI code review for pull requests using centrally-managed skills/prompts, with optional per-repo overrides.'
+author: 'markphelps'
+
+inputs:
+  pr-number:
+    description: 'The pull request number to review.'
+    required: true
+  repo:
+    description: 'owner/name the PR belongs to. Defaults to the calling repository.'
+    required: false
+    default: ${{ github.repository }}
+  anthropic-api-key:
+    description: 'Anthropic API key for the review model.'
+    required: true
+  model:
+    description: 'Override the review model (e.g. anthropic/claude-opus-4-7). Defaults to the agent default.'
+    required: false
+    default: ''
+  override-mode:
+    description: 'How a consuming repo .flue/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
+    required: false
+    default: 'merge'
+  github-token:
+    description: 'Token used by gh to read the diff and post the review. Needs pull-requests: write.'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    # `github.action_path` is the checked-out agent repo; the Flue project root
+    # is two levels up from this action. Resolve it to an absolute path once.
+    - name: Resolve agent project dir
+      id: agent
+      shell: bash
+      run: echo "dir=$(cd '${{ github.action_path }}/../..' && pwd)" >> "$GITHUB_OUTPUT"
+
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 11
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: ${{ steps.agent.outputs.dir }}/pnpm-lock.yaml
+
+    - name: Install agent dependencies
+      shell: bash
+      working-directory: ${{ steps.agent.outputs.dir }}
+      run: pnpm install --frozen-lockfile
+
+    - name: Run PR review
+      shell: bash
+      working-directory: ${{ steps.agent.outputs.dir }}
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        # Central skills/prompts live here; consumer overrides (if any) live in
+        # <their repo>/.flue. The workflow layers them per override-mode.
+        REVIEW_AGENT_DIR: ${{ steps.agent.outputs.dir }}
+        REVIEW_TARGET_DIR: ${{ github.workspace }}
+        REVIEW_OVERRIDE_MODE: ${{ inputs.override-mode }}
+        REVIEW_MODEL: ${{ inputs.model }}
+      run: |
+        pnpm exec flue run pr-review \
+          --payload "{\"prNumber\": ${{ inputs.pr-number }}, \"repo\": \"${{ inputs.repo }}\"}"

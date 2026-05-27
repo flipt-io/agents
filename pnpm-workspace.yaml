@@ -1,0 +1,27 @@
+# This repo is the pnpm workspace root for a fleet of Flue agents.
+#
+# Today it holds a single Flue project (this directory) whose agents live in
+# ./workflows. As you add more agents you have two options:
+#
+#   1. Add another file under ./workflows/ (cheapest — one build, one deploy,
+#      shares the global skills/ and prompts/ here).
+#   2. Promote agents into isolated packages (e.g. ./packages/<name>) for
+#      independent deploys, then list them below.
+#
+# When you add packages, uncomment and extend this list:
+# packages:
+#   - "packages/*"
+packages: []
+# esbuild powers the `flue build` toolchain and must run its install script.
+# The rest are optional native/provider deps not needed for the Node target.
+allowBuilds:
+  esbuild: true
+  '@google/genai': false
+  '@mongodb-js/zstd': false
+  node-liblzma: false
+  protobufjs: false
+  sharp: false
+  workerd: false
+minimumReleaseAgeExclude:
+  - '@flue/runtime@0.8.0'
+  - '@flue/cli@0.8.0'
