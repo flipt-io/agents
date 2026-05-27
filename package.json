@@ -17,6 +17,7 @@
     "valibot": "^1.4.1"
   },
   "devDependencies": {
-    "@flue/cli": "^0.8.0"
+    "@flue/cli": "^0.8.0",
+    "@types/node": "^25.9.1"
   }
 }

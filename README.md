@@ -2,7 +2,10 @@
 
 A [Flue](https://flueframework.com) agent that reviews pull requests using
 **globally-configured skills and prompts** — they apply to every PR, not per
-invocation. Built to run in GitHub Actions on `anthropic/claude-sonnet-4-6`.
+invocation. Runs in GitHub Actions on [GitHub Models](https://docs.github.com/en/github-models)
+(default `github/openai/gpt-4.1`) — no API key required; Anthropic is also
+supported. The model analyzes the diff and returns a structured verdict; the
+workflow posts the review.
 
 ## Layout
 
@@ -21,6 +24,7 @@ agents/                       # pnpm workspace root (room for more agents later)
     pr-review/action.yml      # composite action consuming repos use
   examples/
     consumer-workflow.yml     # copy-paste workflow for a consuming repo
+    sample-consumer/.flue/    # example per-repo overrides
   app.ts                      # runtime entry: registers model providers (incl. GitHub Models)
   flue.config.ts              # default target (node)
   .github/workflows/
@@ -43,6 +47,10 @@ agents/                       # pnpm workspace root (room for more agents later)
   auto-discovers it at runtime, so the review process keeps project context, but
   it is not the reviewer's persona. Per-review context about the code being
   reviewed comes from the *target* repo's own `AGENTS.md`.
+- **Posting is deterministic, done by the workflow — not the model.** The
+  `code-review` skill only *analyzes* and returns `{ verdict, summary,
+  findings }`; `workflows/pr-review.ts` renders that and posts the review via
+  `gh`. (Smaller models can't be trusted to reliably run the post step.)
 
 The payload only ever carries *which* PR to review (`prNumber`, optional
 `repo`) — never the skills or prompts.
@@ -80,6 +88,10 @@ the review logic, skills, and prompts stay centralized here. See
 
 ```yaml
 # .github/workflows/pr-review.yml in the consuming repo
+permissions:
+  contents: read
+  pull-requests: write   # required: the workflow posts the review
+  models: read           # GitHub Models auth (no API key)
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -88,8 +100,13 @@ jobs:
       - uses: <owner>/agents/actions/pr-review@main   # @main = always-latest; pin @v1 for reproducible
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
+
+> **Action visibility:** GitHub only lets a **private** action be consumed by
+> **private** repos in the org. If the consumer is public (or you just want the
+> simplest setup), make `agents` public. For fork PRs on a public repo, the
+> consumer must trigger on `pull_request_target` (so the job gets a writable
+> token + model access) — see [`examples/consumer-workflow.yml`](examples/consumer-workflow.yml).
 
 ### Per-repo overrides
 
@@ -103,7 +120,7 @@ dir, so it can hold overrides for every fleet agent, not just this one. The
 ## Run it locally
 
 ```bash
-cp .env.example .env        # add ANTHROPIC_API_KEY and a GH_TOKEN
+cp .env.example .env        # GITHUB_MODELS_TOKEN (models:read) + GH_TOKEN for gh
 pnpm install
 pnpm exec flue run pr-review --payload '{"prNumber": 123, "repo": "owner/name"}'
 ```

@@ -1,4 +1,4 @@
-import { createAgent, type FlueContext, type WorkflowRouteHandler } from '@flue/runtime';
+import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHandler } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 
@@ -24,6 +24,9 @@ const agent = createAgent((ctx) => ({
   // agent's shell, so expose the GitHub token explicitly — otherwise the `gh`
   // CLI the reviewer shells out to can't read the diff or post the review.
   sandbox: local({
+    // The reviewer shells out to `gh` to read the PR diff; expose the token so
+    // it's authenticated. (Posting the review is done deterministically by the
+    // workflow below, not by the model.)
     env: {
       GH_TOKEN: ctx.env.GH_TOKEN ?? ctx.env.GITHUB_TOKEN,
       GITHUB_TOKEN: ctx.env.GITHUB_TOKEN ?? ctx.env.GH_TOKEN,
@@ -66,21 +69,61 @@ function resolveConfig(env: Record<string, string | undefined>) {
   };
 }
 
-// The structured verdict the agent must return, so callers/CI can branch on it.
-const ReviewResult = v.object({
+// What the model returns. It only *analyzes* — it does not post. The workflow
+// posts deterministically from this (don't trust the LLM to run gh + self-report).
+const Finding = v.object({
+  file: v.string(),
+  line: v.optional(v.number()),
+  severity: v.picklist(['critical', 'major', 'minor', 'nit']),
+  comment: v.string(),
+});
+const SkillResult = v.object({
   verdict: v.picklist(['approve', 'comment', 'request_changes']),
   summary: v.string(),
-  findings: v.array(
-    v.object({
-      file: v.string(),
-      line: v.optional(v.number()),
-      severity: v.picklist(['critical', 'major', 'minor', 'nit']),
-      comment: v.string(),
-    }),
-  ),
-  // True once the review has been posted to the PR via `gh`.
-  posted: v.boolean(),
+  findings: v.array(Finding),
 });
+type SkillResult = v.InferOutput<typeof SkillResult>;
+
+const VERDICT_LABEL: Record<SkillResult['verdict'], string> = {
+  approve: 'approve',
+  comment: 'comment',
+  request_changes: 'request changes',
+};
+
+// Render the review as a single markdown comment body.
+function renderReview(r: SkillResult): string {
+  const lines = [`**Verdict: ${VERDICT_LABEL[r.verdict]}**`, '', r.summary.trim()];
+  if (r.findings.length > 0) {
+    for (const file of [...new Set(r.findings.map((f) => f.file))]) {
+      lines.push('', `### ${file}`);
+      for (const f of r.findings.filter((f) => f.file === file)) {
+        lines.push(`- **${f.severity}**${f.line ? ` (L${f.line})` : ''}: ${f.comment}`);
+      }
+    }
+  }
+  lines.push('', '_🤖 Automated review by the Flue PR review agent._');
+  return lines.join('\n');
+}
+
+// Post the review from the workflow (deterministic — the model doesn't post).
+// Writes the body to a sandbox file first so the multi-line markdown needs no
+// shell escaping, then submits a comment review via `gh`, falling back to a
+// plain PR comment if review submission is restricted. Returns whether it posted.
+async function postReview(
+  session: FlueSession,
+  prNumber: number,
+  repo: string,
+  body: string,
+): Promise<boolean> {
+  const bodyPath = '/tmp/flue-review.md';
+  await session.fs.writeFile(bodyPath, body);
+  const target = `${prNumber} --repo '${repo}' --body-file ${bodyPath}`;
+  for (const cmd of [`gh pr review ${target} --comment`, `gh pr comment ${target}`]) {
+    const { exitCode } = await session.shell(cmd);
+    if (exitCode === 0) return true;
+  }
+  return false;
+}
 
 export async function run({ init, payload, env }: FlueContext) {
   const { prNumber, repo } = v.parse(PayloadSchema, payload);
@@ -92,7 +135,7 @@ export async function run({ init, payload, env }: FlueContext) {
 
   // Activate the global review skill. It layers the central skills/prompts in
   // `agentDir` with any per-repo overrides in `localConfigDir` (per
-  // `overrideMode`), fetches the diff with `gh`, reviews, and posts the result.
+  // `overrideMode`), fetches the diff with `gh`, and returns its findings.
   const { data } = await session.skill('code-review', {
     model: cfg.model,
     args: {
@@ -103,10 +146,14 @@ export async function run({ init, payload, env }: FlueContext) {
       localConfigDir: cfg.localConfigDir,
       overrideMode: cfg.overrideMode,
     },
-    result: ReviewResult,
+    result: SkillResult,
   });
 
-  return data;
+  // Post deterministically from the structured result — the model doesn't post.
+  const posted = targetRepo ? await postReview(session, prNumber, targetRepo, renderReview(data)) : false;
+  if (!posted) console.error(`Failed to post review to ${targetRepo}#${prNumber}`);
+
+  return { ...data, posted };
 }
 
 // Internal-only: no public HTTP route. This agent is invoked from CI via
