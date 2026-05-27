@@ -1,24 +1,35 @@
-# PR Review Agent
+# Flipt Agents
 
-A [Flue](https://flueframework.com) agent that reviews pull requests using
-**globally-configured skills and prompts** — they apply to every PR, not per
-invocation. Runs in GitHub Actions on [GitHub Models](https://docs.github.com/en/github-models)
-(default `github/openai/gpt-4.1`) — no API key required; Anthropic is also
-supported. The model analyzes the diff and returns a structured verdict; the
-workflow posts the review.
+A collection of [Flue](https://flueframework.com) agents for the Flipt
+organization. It's one pnpm-workspace monorepo: each agent is a workflow in
+`workflows/`, and they share common infrastructure — model providers (`app.ts`),
+the [GitHub Models](https://docs.github.com/en/github-models) default
+(`github/openai/gpt-4.1`, no API key required), CI patterns, and reusable
+skills / prompts / personas.
+
+The first agent is **PR Review**; more will be added over time.
+
+## Agents
+
+| Agent | What it does | How it runs |
+| --- | --- | --- |
+| **PR Review** (`workflows/pr-review.ts`) | Reviews a pull request against the target repo's conventions and posts a verdict + findings. | A composite GitHub Action other repos call — see [the PR Review agent](#the-pr-review-agent). |
+| _…more soon_ | | |
+
+Adding one is cheap — see [Adding an agent](#adding-an-agent).
 
 ## Layout
 
 ```
-agents/                       # pnpm workspace root (room for more agents later)
+agents/                       # pnpm workspace root — a fleet of agents
   workflows/
-    pr-review.ts              # the agent: registers globals, reviews one PR
+    pr-review.ts              # one file per agent (PR Review is the first)
   skills/
-    code-review/SKILL.md      # GLOBAL skill — the review methodology
+    code-review/SKILL.md      # skills agents register (code-review is PR Review's)
   prompts/
-    *.md                      # GLOBAL prompts — review priorities, drop-in
+    *.md                      # prompt guidance loaded at runtime
   personas/
-    *.ts                      # GLOBAL subagents the review can delegate to
+    *.ts                      # subagents an agent can delegate to
   AGENTS.md                   # docs for agents working ON this repo (not the reviewer's persona)
   actions/
     pr-review/action.yml      # composite action consuming repos use
@@ -31,7 +42,9 @@ agents/                       # pnpm workspace root (room for more agents later)
     pr-review.yml             # dogfoods the action on this repo's PRs
 ```
 
-## How "global" works
+## How an agent is built
+
+Every agent here is assembled the same way — PR Review is the worked example:
 
 - **Skills** are registered on the agent in `createAgent({ skills: [...] })`, so
   they are part of the agent, not the payload. Add one: drop
@@ -79,7 +92,12 @@ is a reasoning model that needs the responses API / `max_completion_tokens`,
 which isn't wired up yet. See
 [`actions/pr-review/README.md`](actions/pr-review/README.md#models).
 
-## Use it in other repos
+## The PR Review agent
+
+Reviews a pull request against the target repo's conventions and posts a
+verdict + findings. It's packaged as a composite GitHub Action other repos call.
+
+### Use it in other repos
 
 Consuming repos opt in with a small workflow that calls the composite action;
 the review logic, skills, and prompts stay centralized here. See
@@ -117,7 +135,7 @@ dir, so it can hold overrides for every fleet agent, not just this one. The
 (default) or `replace` them. Full details in
 [`actions/pr-review/README.md`](actions/pr-review/README.md).
 
-## Run it locally
+### Run it locally
 
 ```bash
 cp .env.example .env        # GITHUB_MODELS_TOKEN (models:read) + GH_TOKEN for gh
@@ -128,8 +146,14 @@ pnpm exec flue run pr-review --payload '{"prNumber": 123, "repo": "owner/name"}'
 `flue run` builds the project, invokes the workflow, and prints the structured
 verdict as JSON.
 
-## Adding more agents
+## Adding an agent
 
-Either add another file under `workflows/` (shares these globals, one build /
-deploy), or promote agents into isolated packages under `packages/*` and list
-them in `pnpm-workspace.yaml` for independent deploys.
+Add `workflows/<name>.ts` — it shares everything above: the model providers in
+`app.ts`, the GitHub Models default, and the skills / prompts / personas
+patterns. Give it its own skill(s) under `skills/`, prompt guidance under
+`prompts/`, and personas under `personas/` as needed, then register them on the
+agent. Run it with `flue run <name>`, and (if it should be consumable by other
+repos) add an action under `actions/<name>/`.
+
+For independent builds/deploys, promote an agent into its own package under
+`packages/*` and list it in `pnpm-workspace.yaml`.
