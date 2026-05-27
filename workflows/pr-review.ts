@@ -1,5 +1,4 @@
-import { execFileSync } from 'node:child_process';
-import { createAgent, type FlueContext, type WorkflowRouteHandler } from '@flue/runtime';
+import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHandler } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 
@@ -106,19 +105,22 @@ function renderReview(r: SkillResult): string {
   return lines.join('\n');
 }
 
-// Post the review. Tries a (comment) review first; falls back to a plain PR
-// comment if review submission is restricted. Returns whether anything posted.
-function postReview(prNumber: number, repo: string, body: string): boolean {
-  for (const args of [
-    ['pr', 'review', String(prNumber), '--repo', repo, '--comment', '--body-file', '-'],
-    ['pr', 'comment', String(prNumber), '--repo', repo, '--body-file', '-'],
-  ]) {
-    try {
-      execFileSync('gh', args, { input: body, env: process.env });
-      return true;
-    } catch {
-      // Review submission may be restricted; fall through to a plain comment.
-    }
+// Post the review from the workflow (deterministic — the model doesn't post).
+// Writes the body to a sandbox file first so the multi-line markdown needs no
+// shell escaping, then submits a comment review via `gh`, falling back to a
+// plain PR comment if review submission is restricted. Returns whether it posted.
+async function postReview(
+  session: FlueSession,
+  prNumber: number,
+  repo: string,
+  body: string,
+): Promise<boolean> {
+  const bodyPath = '/tmp/flue-review.md';
+  await session.fs.writeFile(bodyPath, body);
+  const target = `${prNumber} --repo '${repo}' --body-file ${bodyPath}`;
+  for (const cmd of [`gh pr review ${target} --comment`, `gh pr comment ${target}`]) {
+    const { exitCode } = await session.shell(cmd);
+    if (exitCode === 0) return true;
   }
   return false;
 }
@@ -148,7 +150,7 @@ export async function run({ init, payload, env }: FlueContext) {
   });
 
   // Post deterministically from the structured result — the model doesn't post.
-  const posted = targetRepo ? postReview(prNumber, targetRepo, renderReview(data)) : false;
+  const posted = targetRepo ? await postReview(session, prNumber, targetRepo, renderReview(data)) : false;
   if (!posted) console.error(`Failed to post review to ${targetRepo}#${prNumber}`);
 
   return { ...data, posted };
