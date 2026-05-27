@@ -58,14 +58,15 @@ array.
 
 ## Models
 
-Default: **`github/openai/gpt-4.1`** via [GitHub Models](https://docs.github.com/en/github-models)
-free tier (registered in `app.ts`), authenticated by a GitHub token with
-`models: read` — no Anthropic key. The free tier is rate-limited (~8k input /
-4k out per request), so very large diffs may get truncated; fine for most PRs.
+Default: **`github/openai/gpt-5-mini`** via [GitHub Models](https://docs.github.com/en/github-models)
+(registered in `app.ts`), authenticated by a GitHub token with `models: read` —
+no Anthropic key. It's a `"custom"` rate-limit-tier model (200k context), so it
+needs **paid / org-enabled** GitHub Models — but unlike the free tier (capped at
+~8k tokens/request, too small for real reviews) it handles normal PRs.
 
 Override per run with `REVIEW_MODEL` (locally) or the action's `model` input
-(CI): `github/openai/gpt-5` (paid `"custom"` tier, stronger) or
-`anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`). See
+(CI): `github/openai/gpt-5` (larger), `github/openai/gpt-4.1` (free, ~8k cap),
+or `anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`). See
 [`actions/pr-review/README.md`](actions/pr-review/README.md#models).
 
 ## Use it in other repos

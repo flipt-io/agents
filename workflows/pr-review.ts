@@ -29,10 +29,11 @@ const agent = createAgent((ctx) => ({
       GITHUB_TOKEN: ctx.env.GITHUB_TOKEN ?? ctx.env.GH_TOKEN,
     },
   }),
-  // Free GitHub Models default (registered in app.ts). gpt-4.1 is the strongest
-  // free-tier coding model. Override per run with REVIEW_MODEL, e.g.
-  // REVIEW_MODEL=github/openai/gpt-5 or anthropic/claude-sonnet-4-6.
-  model: 'github/openai/gpt-4.1',
+  // GitHub Models default (registered in app.ts). gpt-5-mini ("custom" tier,
+  // 200k context — needs paid/enabled GitHub Models) is large enough for real
+  // reviews; the free 8k-cap models are not. Override per run with REVIEW_MODEL,
+  // e.g. REVIEW_MODEL=github/openai/gpt-5 or anthropic/claude-sonnet-4-6.
+  model: 'github/openai/gpt-5-mini',
   // Global skills — applied to every PR.
   skills: [codeReview],
   // Global personas — focused subagents the review can delegate to.

@@ -16,7 +16,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read            # default model is github/openai/gpt-4.1 (free tier)
+  models: read            # default model is github/openai/gpt-5-mini
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -28,9 +28,9 @@ jobs:
 ```
 
 That's it — open a PR and the agent reviews it. The default model
-(`github/openai/gpt-4.1`, free tier) runs on GitHub Models authenticated by the
-built-in `GITHUB_TOKEN` (no API key). See [Models](#models) to use GPT-5 or
-Anthropic instead.
+(`github/openai/gpt-5-mini`) runs on GitHub Models authenticated by the built-in
+`GITHUB_TOKEN` (no API key). See [Models](#models) for free vs. paid options and
+Anthropic.
 
 - `@main` → always uses the latest central skills/prompts.
 - `@v1` (a tag) → pins to a released version for reproducible reviews.
@@ -41,7 +41,7 @@ Anthropic instead.
 | ------------------- | -------- | --------------------- | ----------- |
 | `pr-number`         | yes      | —                     | PR number to review. |
 | `anthropic-api-key` | no       | —                     | Anthropic key. Required only for `anthropic/*` models. |
-| `model`             | no       | `github/openai/gpt-4.1` | Override the review model. |
+| `model`             | no       | `github/openai/gpt-5-mini` | Override the review model. |
 | `repo`              | no       | current repo          | `owner/name` of the PR. |
 | `override-mode`     | no       | `merge`               | `merge` or `replace` — how local overrides combine with defaults. |
 | `github-token`      | no       | `github.token`        | Token for `gh` and GitHub Models (needs `pull-requests: write`, and `models: read` for `github/*`). |
@@ -91,13 +91,14 @@ The agent runs on [GitHub Models](https://docs.github.com/en/github-models) by
 default — `app.ts` registers it as a Flue provider (`github/*`,
 OpenAI-chat-completions compatible). Three ways to run:
 
-- **Default — `github/openai/gpt-4.1` (free tier).** Add `models: read` to
-  `permissions`; the built-in `GITHUB_TOKEN` authenticates it (no API key).
-  Other free `low`/`high`-tier ids work the same way (e.g.
-  `github/openai/gpt-4o`, `github/openai/gpt-4.1-mini`).
-- **GPT-5 (paid).** Set `model: github/openai/gpt-5`. It's a `"custom"`
-  rate-limit-tier model, so it generally requires **paid / org-enabled** GitHub
-  Models rather than the free tier.
+- **Default — `github/openai/gpt-5-mini`.** Add `models: read` to `permissions`;
+  the built-in `GITHUB_TOKEN` authenticates it (no API key). It's a `"custom"`
+  rate-limit-tier model (200k context), so it needs **paid / org-enabled**
+  GitHub Models. `github/openai/gpt-5` works the same way (larger/stronger).
+- **Free GitHub model.** Set `model:` to a `low`/`high`-tier id, e.g.
+  `github/openai/gpt-4.1` or `github/openai/gpt-4o`. Still just needs
+  `models: read` — but the free tier caps requests at ~8k input tokens, which is
+  too small for most real reviews (system prompt + skill + diff overflow it).
 - **Anthropic.** Set `model: anthropic/claude-sonnet-4-6` and pass
   `anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}`. Drop `models: read`.
 
