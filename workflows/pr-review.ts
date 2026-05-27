@@ -29,11 +29,12 @@ const agent = createAgent((ctx) => ({
       GITHUB_TOKEN: ctx.env.GITHUB_TOKEN ?? ctx.env.GH_TOKEN,
     },
   }),
-  // GitHub Models default (registered in app.ts). gpt-5-mini ("custom" tier,
-  // 200k context — needs paid/enabled GitHub Models) is large enough for real
-  // reviews; the free 8k-cap models are not. Override per run with REVIEW_MODEL,
-  // e.g. REVIEW_MODEL=github/openai/gpt-5 or anthropic/claude-sonnet-4-6.
-  model: 'github/openai/gpt-5-mini',
+  // GitHub Models default (registered in app.ts). gpt-4.1 accepts the standard
+  // chat-completions params and, on a paid plan, lifts the free 8k-token cap to
+  // production limits — enough for real reviews. (The gpt-5 family is a
+  // reasoning model that needs max_completion_tokens via the responses API, so
+  // it isn't the default here.) Override per run with REVIEW_MODEL.
+  model: 'github/openai/gpt-4.1',
   // Global skills — applied to every PR.
   skills: [codeReview],
   // Global personas — focused subagents the review can delegate to.
