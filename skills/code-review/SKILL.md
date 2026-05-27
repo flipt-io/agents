@@ -1,12 +1,13 @@
 ---
 name: code-review
-description: Review a pull request end-to-end — load the team's global review guidance, fetch the diff with gh, analyze it, and post a structured review back to the PR.
+description: Review a pull request — load the team's global review guidance, fetch the diff with gh, analyze it, and return a structured verdict + findings (the workflow posts the review).
 ---
 
 # Code Review
 
-You review a single pull request and post your findings back to it. You are
-given these inputs:
+You review a single pull request and return structured findings. (You do **not**
+post them — the workflow posts your returned result to the PR.) You are given
+these inputs:
 
 - `prNumber` — the pull request number to review.
 - `repo` — the `owner/name` the PR belongs to.
@@ -119,51 +120,21 @@ the diff calls for it.
 Delegate only when it earns its keep; for small or low-risk diffs, review them
 yourself.
 
-## Step 4 — Post the review (required)
+## Step 4 — Decide the verdict and return the result
 
-Decide a `verdict`:
+Pick a `verdict`:
 
 - `request_changes` — there is at least one unaddressed `critical` or `major`.
 - `comment` — only `minor`/`nit` findings, or open questions.
-- `approve` — no findings worth blocking on.
+- `approve` — nothing worth changing.
 
-**You MUST post the review before finishing.** Do not return your result until
-you have run the post command and seen it succeed. Write the body to a file
-first (avoids shell-quoting issues with multi-line markdown): verdict on the
-first line, then the summary. Add a findings section **only if there are
-findings** — when there are none, the body is just the verdict and a one-line
-summary (e.g. "Looks good — no changes requested."). Never list files just to
-say they're fine.
+Then return data matching the requested result schema exactly:
 
-```bash
-cat > /tmp/review.md <<'BODY'
-**Verdict: <approve | comment | request changes>**
-
-<one-paragraph summary>
-
-<!-- Include the section below ONLY if findings is non-empty: -->
-### <path/to/file>
-- **<severity>** (L<line>): <comment>
-...
-BODY
-
-gh pr review "$prNumber" --repo "$repo" --comment --body-file /tmp/review.md
-```
-
-Always submit with `--comment`, even when your verdict is "approve": in CI the
-GitHub token is not permitted to submit an **approval** review, and a comment
-review always posts. State the real verdict in the body. If `gh pr review`
-still fails for any reason, fall back to `gh pr comment "$prNumber" --repo
-"$repo" --body-file /tmp/review.md`.
-
-Set `posted: true` only if one of those commands succeeded; otherwise set it to
-`false` and explain why in your summary.
-
-## Step 5 — Return the structured result
-
-Return data matching the requested result schema exactly:
-
-- `verdict`: the value from Step 4.
-- `summary`: 1–3 sentences — the overall take and the headline issues.
+- `verdict`: the value above.
+- `summary`: 1–3 sentences — the overall take and the headline issues (for a
+  clean PR, a one-liner like "Looks good — no changes requested.").
 - `findings`: the array from Step 3 (empty if none).
-- `posted`: `true` only if Step 4's `gh pr review` succeeded.
+
+**Do not post anything yourself.** You don't have a posting step and you don't
+run `gh pr review`/`gh pr comment` — the workflow takes your returned result and
+posts the review to the PR. Your job ends when you return the structured data.

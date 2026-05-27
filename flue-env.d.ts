@@ -7,6 +7,3 @@ declare module '*.md' {
   const skill: any;
   export default skill;
 }
-
-// `process.env` access in app.ts without pulling in all of @types/node.
-declare const process: { env: Record<string, string | undefined> };
