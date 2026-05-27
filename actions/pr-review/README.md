@@ -16,6 +16,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  models: read            # default model is github/openai/gpt-4.1 (free tier)
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -24,25 +25,26 @@ jobs:
       - uses: <owner>/agents/actions/pr-review@main
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-Add `ANTHROPIC_API_KEY` as a repo secret. That's it — open a PR and the agent
-reviews it.
+That's it — open a PR and the agent reviews it. The default model
+(`github/openai/gpt-4.1`, free tier) runs on GitHub Models authenticated by the
+built-in `GITHUB_TOKEN` (no API key). See [Models](#models) to use GPT-5 or
+Anthropic instead.
 
 - `@main` → always uses the latest central skills/prompts.
 - `@v1` (a tag) → pins to a released version for reproducible reviews.
 
 ## Inputs
 
-| Input               | Required | Default              | Description |
-| ------------------- | -------- | -------------------- | ----------- |
-| `pr-number`         | yes      | —                    | PR number to review. |
-| `anthropic-api-key` | yes      | —                    | Model API key. |
-| `repo`              | no       | current repo         | `owner/name` of the PR. |
-| `model`             | no       | agent default        | Override the review model. |
-| `override-mode`     | no       | `merge`              | `merge` or `replace` — how local overrides combine with defaults. |
-| `github-token`      | no       | `github.token`       | Token for `gh` (needs `pull-requests: write`). |
+| Input               | Required | Default               | Description |
+| ------------------- | -------- | --------------------- | ----------- |
+| `pr-number`         | yes      | —                     | PR number to review. |
+| `anthropic-api-key` | no       | —                     | Anthropic key. Required only for `anthropic/*` models. |
+| `model`             | no       | `github/openai/gpt-4.1` | Override the review model. |
+| `repo`              | no       | current repo          | `owner/name` of the PR. |
+| `override-mode`     | no       | `merge`               | `merge` or `replace` — how local overrides combine with defaults. |
+| `github-token`      | no       | `github.token`        | Token for `gh` and GitHub Models (needs `pull-requests: write`, and `models: read` for `github/*`). |
 
 ## Per-repo overrides (`.flue/`)
 
@@ -82,6 +84,32 @@ free at the pinned ref. The action installs deps, then runs
 config (`REVIEW_AGENT_DIR`) and the consumer's checkout (`REVIEW_TARGET_DIR`).
 The `code-review` skill resolves the layered guidance, fetches the diff with
 `gh`, reviews, and posts the result.
+
+## Models
+
+The agent runs on [GitHub Models](https://docs.github.com/en/github-models) by
+default — `app.ts` registers it as a Flue provider (`github/*`,
+OpenAI-chat-completions compatible). Three ways to run:
+
+- **Default — `github/openai/gpt-4.1` (free tier).** Add `models: read` to
+  `permissions`; the built-in `GITHUB_TOKEN` authenticates it (no API key).
+  Other free `low`/`high`-tier ids work the same way (e.g.
+  `github/openai/gpt-4o`, `github/openai/gpt-4.1-mini`).
+- **GPT-5 (paid).** Set `model: github/openai/gpt-5`. It's a `"custom"`
+  rate-limit-tier model, so it generally requires **paid / org-enabled** GitHub
+  Models rather than the free tier.
+- **Anthropic.** Set `model: anthropic/claude-sonnet-4-6` and pass
+  `anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}`. Drop `models: read`.
+
+Locally, set `GITHUB_MODELS_TOKEN` (a PAT with `models: read`) or
+`REVIEW_MODEL` + `ANTHROPIC_API_KEY`.
+
+> **Heads up on the free tier.** GitHub Models does **not** host Claude, and the
+> *free* tier is rate-limited (~8000 input / 4000 output tokens per request,
+> ~10–15 requests/min, ~50–150 requests/day). A review of a non-trivial PR makes
+> several model calls and a large diff can exceed the per-request token cap, so
+> big or busy repos will hit limits. Use paid GitHub Models (e.g. gpt-5) or
+> Anthropic for real throughput.
 
 ## Alternative: reusable workflow
 
