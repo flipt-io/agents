@@ -17,11 +17,18 @@ import codeReview from '../skills/code-review/SKILL.md' with { type: 'skill' };
 // available for the reviewer to delegate focused deep-dives to, on every PR.
 import { personas } from '../personas/index.ts';
 
-const agent = createAgent(() => ({
-  // `local()` runs against the host filesystem + $PATH. In CI that is the
-  // checked-out repo plus `gh`, `git`, etc. Flue auto-discovers AGENTS.md and
-  // the skills in this project from the project root.
-  sandbox: local(),
+const agent = createAgent((ctx) => ({
+  // `local()` runs against the host filesystem + $PATH (the checked-out repo
+  // plus `gh`, `git`, etc.), and auto-discovers AGENTS.md + skills from the
+  // project root. By default it only forwards shell-essential env vars to the
+  // agent's shell, so expose the GitHub token explicitly — otherwise the `gh`
+  // CLI the reviewer shells out to can't read the diff or post the review.
+  sandbox: local({
+    env: {
+      GH_TOKEN: ctx.env.GH_TOKEN ?? ctx.env.GITHUB_TOKEN,
+      GITHUB_TOKEN: ctx.env.GITHUB_TOKEN ?? ctx.env.GH_TOKEN,
+    },
+  }),
   // Free GitHub Models default (registered in app.ts). gpt-4.1 is the strongest
   // free-tier coding model. Override per run with REVIEW_MODEL, e.g.
   // REVIEW_MODEL=github/openai/gpt-5 or anthropic/claude-sonnet-4-6.
