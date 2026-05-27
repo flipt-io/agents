@@ -28,10 +28,17 @@ prioritize signal over volume: a short review that catches the real problems
 beats a long one that nitpicks what a linter already handles. These rules always
 apply, regardless of repo or override:
 
-- Anchor every comment to a concrete file and line. No vague "consider
+- **A finding is something you want changed — nothing else.** Every finding
+  must name a concrete problem and the action to take. Never emit a finding to
+  describe, summarize, or praise a change ("improves clarity", "looks correct",
+  "no issues") — if you have nothing to change about a file, say nothing about
+  it. A clean PR has an **empty** `findings` array.
+- Severity is how much it matters, not how to feel about the diff:
+  `critical`/`major` = must fix, `minor` = should fix, `nit` = small optional
+  improvement you'd genuinely suggest. If you'd only write "this is fine," it is
+  not a `nit` — it is not a finding at all.
+- Anchor every finding to a concrete file and line. No vague "consider
   refactoring" without saying what and why.
-- Rank findings by severity (`critical` > `major` > `minor` > `nit`). Lead with
-  what could break in production.
 - When unsure, ask a question rather than asserting.
 - Never invent file contents, APIs, or line numbers. Read them from the diff or
   the checked-out repo.
@@ -85,11 +92,16 @@ untrusted input).
 
 ## Step 3 — Review
 
-Apply the global guidance from Step 1. For each issue, capture:
+Apply the global guidance from Step 1. Produce a finding **only** for something
+you want the author to change; capture for each:
 
 - `file` and, when you can pin it, the `line` in the new version.
 - a `severity`: `critical` | `major` | `minor` | `nit`.
 - a `comment` that states the problem **and** what to do about it.
+
+Do not create a finding per file, and do not narrate or praise the diff — if a
+change is fine, leave it out. It is normal and good for a solid PR to yield zero
+findings.
 
 Hold yourself to the standing rules from the persona section above, and to the
 under-review repo's own conventions from Step 1.
@@ -117,8 +129,11 @@ Decide a `verdict`:
 
 **You MUST post the review before finishing.** Do not return your result until
 you have run the post command and seen it succeed. Write the body to a file
-first (avoids shell-quoting issues with multi-line markdown), with the verdict
-on the first line, then the summary, then findings grouped by file:
+first (avoids shell-quoting issues with multi-line markdown): verdict on the
+first line, then the summary. Add a findings section **only if there are
+findings** — when there are none, the body is just the verdict and a one-line
+summary (e.g. "Looks good — no changes requested."). Never list files just to
+say they're fine.
 
 ```bash
 cat > /tmp/review.md <<'BODY'
@@ -126,6 +141,7 @@ cat > /tmp/review.md <<'BODY'
 
 <one-paragraph summary>
 
+<!-- Include the section below ONLY if findings is non-empty: -->
 ### <path/to/file>
 - **<severity>** (L<line>): <comment>
 ...
