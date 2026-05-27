@@ -1,8 +1,10 @@
 # Copy this into a consuming repo as `.github/workflows/pr-review.yml`.
 # Replace <owner> with the org/user that hosts the agents repo.
 #
-# Add ANTHROPIC_API_KEY as a repository secret (Settings -> Secrets and
-# variables -> Actions). GITHUB_TOKEN is provided automatically.
+# Default model is github/openai/gpt-4.1 via GitHub Models (free tier) — the
+# built-in GITHUB_TOKEN authenticates it, so no API key is needed, but the token
+# needs `models: read` (below). To use GPT-5 (paid) or Anthropic instead, see
+# the comments below.
 name: PR Review
 
 on:
@@ -12,6 +14,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  models: read
 
 jobs:
   review:
@@ -23,7 +26,16 @@ jobs:
       - uses: <owner>/agents/actions/pr-review@main # @main = always-latest skills/prompts; pin @v1 for reproducible
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Optional:
-          # model: anthropic/claude-opus-4-7
-          # override-mode: merge   # or: replace
+          # model: github/openai/gpt-5     # paid "custom" tier, stronger
+          # override-mode: merge           # or: replace
+
+      # --- Or review with Anthropic instead of GitHub Models -----------------
+      # Drop `models: read` above, add ANTHROPIC_API_KEY as a repo secret, and
+      # use this step instead:
+      #
+      # - uses: <owner>/agents/actions/pr-review@main
+      #   with:
+      #     pr-number: ${{ github.event.pull_request.number }}
+      #     model: anthropic/claude-sonnet-4-6
+      #     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

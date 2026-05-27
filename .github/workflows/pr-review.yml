@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  models: read # default model is github/openai/gpt-4.1 via GitHub Models (free tier)
 
 jobs:
   review:
@@ -20,4 +21,3 @@ jobs:
       - uses: ./actions/pr-review
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
