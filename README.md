@@ -59,13 +59,16 @@ array.
 ## Models
 
 Default: **`github/openai/gpt-4.1`** via [GitHub Models](https://docs.github.com/en/github-models)
-free tier (registered in `app.ts`), authenticated by a GitHub token with
-`models: read` — no Anthropic key. The free tier is rate-limited (~8k input /
-4k out per request), so very large diffs may get truncated; fine for most PRs.
+(registered in `app.ts`), authenticated by a GitHub token with `models: read` —
+no Anthropic key. On a **free** plan GitHub caps requests at ~8k tokens (too
+small for big diffs); a **paid** plan lifts that to production limits, which is
+what makes real reviews fit.
 
 Override per run with `REVIEW_MODEL` (locally) or the action's `model` input
-(CI): `github/openai/gpt-5` (paid `"custom"` tier, stronger) or
-`anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`). See
+(CI): another GitHub model (e.g. `github/openai/gpt-4o`) or
+`anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`). The gpt-5 family
+is a reasoning model that needs the responses API / `max_completion_tokens`,
+which isn't wired up yet. See
 [`actions/pr-review/README.md`](actions/pr-review/README.md#models).
 
 ## Use it in other repos
