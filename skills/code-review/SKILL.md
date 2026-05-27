@@ -107,7 +107,7 @@ the diff calls for it.
 Delegate only when it earns its keep; for small or low-risk diffs, review them
 yourself.
 
-## Step 4 — Post the review
+## Step 4 — Post the review (required)
 
 Decide a `verdict`:
 
@@ -115,16 +115,33 @@ Decide a `verdict`:
 - `comment` — only `minor`/`nit` findings, or open questions.
 - `approve` — no findings worth blocking on.
 
-Post it. Put inline findings in the body grouped by file, and the one-paragraph
-summary at the top:
+**You MUST post the review before finishing.** Do not return your result until
+you have run the post command and seen it succeed. Write the body to a file
+first (avoids shell-quoting issues with multi-line markdown), with the verdict
+on the first line, then the summary, then findings grouped by file:
 
 ```bash
-# Choose the flag that matches the verdict: --approve | --comment | --request-changes
-gh pr review "$prNumber" --repo "$repo" --comment --body "<your review markdown>"
+cat > /tmp/review.md <<'BODY'
+**Verdict: <approve | comment | request changes>**
+
+<one-paragraph summary>
+
+### <path/to/file>
+- **<severity>** (L<line>): <comment>
+...
+BODY
+
+gh pr review "$prNumber" --repo "$repo" --comment --body-file /tmp/review.md
 ```
 
-If posting fails (e.g. you cannot review your own PR, or the token lacks
-permission), say so in your summary and set `posted: false`.
+Always submit with `--comment`, even when your verdict is "approve": in CI the
+GitHub token is not permitted to submit an **approval** review, and a comment
+review always posts. State the real verdict in the body. If `gh pr review`
+still fails for any reason, fall back to `gh pr comment "$prNumber" --repo
+"$repo" --body-file /tmp/review.md`.
+
+Set `posted: true` only if one of those commands succeeded; otherwise set it to
+`false` and explain why in your summary.
 
 ## Step 5 — Return the structured result
 
