@@ -19,14 +19,16 @@ if (githubModelsToken) {
     // pi-ai appends `/chat/completions` to this base.
     baseUrl: 'https://models.github.ai/inference',
     apiKey: githubModelsToken,
-    // Default sizing is free-tier-safe: GitHub's free tier caps requests at
-    // ~8k input / 4k output regardless of a model's catalog limits. The default
-    // model (github/openai/gpt-4.1) and other free low/high-tier models inherit
-    // this. Paid/"custom"-tier models get larger per-model overrides below.
+    // Default sizing is free-tier-safe: on a free account GitHub caps requests
+    // at ~8k input / 4k output. Per-model overrides below assume a PAID plan,
+    // where those caps lift to production limits.
     contextWindow: 8000,
     maxTokens: 4000,
     models: {
-      // Opt-in, paid "custom" tier — use its real catalog limits.
+      // Default model — paid plan lifts the 8k cap; sized generously for diffs.
+      'openai/gpt-4.1': { contextWindow: 128000, maxTokens: 16384 },
+      // Reasoning models (need the responses API / max_completion_tokens).
+      'openai/gpt-5-mini': { contextWindow: 200000, maxTokens: 16384 },
       'openai/gpt-5': { contextWindow: 200000, maxTokens: 16384 },
     },
   });
