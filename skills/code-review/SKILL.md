@@ -107,6 +107,12 @@ findings.
 Hold yourself to the standing rules from the persona section above, and to the
 under-review repo's own conventions from Step 1.
 
+If documentation tools are available (named `mcp__flipt-docs__*`), use them to
+check the change against documented behavior, APIs, configuration, and
+conventions before flagging — and to ground your suggestions in the docs.
+Prefer citing the docs over asserting from memory; they may be unavailable, in
+which case review as usual.
+
 For high-risk or logic-heavy diffs you may delegate a focused deep-dive to a
 specialized persona and fold its findings into yours:
 

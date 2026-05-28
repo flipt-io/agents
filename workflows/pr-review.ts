@@ -1,4 +1,11 @@
-import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHandler } from '@flue/runtime';
+import {
+  connectMcpServer,
+  createAgent,
+  type FlueContext,
+  type FlueSession,
+  type McpServerConnection,
+  type WorkflowRouteHandler,
+} from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 
@@ -130,30 +137,47 @@ export async function run({ init, payload, env }: FlueContext) {
   const targetRepo = repo ?? env.GITHUB_REPOSITORY;
   const cfg = resolveConfig(env);
 
-  const harness = await init(agent);
-  const session = await harness.session();
+  // Give the reviewer the Flipt docs MCP (no auth) so it can ground reviews in
+  // the docs (tools surface as `mcp__flipt-docs__*`). Best-effort and
+  // env-overridable: set REVIEW_DOCS_MCP_URL='' to disable, or to another URL.
+  const docsMcpUrl = env.REVIEW_DOCS_MCP_URL ?? 'https://docs.flipt.io/mcp';
+  let docs: McpServerConnection | undefined;
+  if (docsMcpUrl) {
+    try {
+      docs = await connectMcpServer('flipt-docs', { url: docsMcpUrl });
+    } catch {
+      console.error(`Docs MCP unavailable (${docsMcpUrl}); reviewing without it.`);
+    }
+  }
 
-  // Activate the global review skill. It layers the central skills/prompts in
-  // `agentDir` with any per-repo overrides in `localConfigDir` (per
-  // `overrideMode`), fetches the diff with `gh`, and returns its findings.
-  const { data } = await session.skill('code-review', {
-    model: cfg.model,
-    args: {
-      prNumber,
-      repo: targetRepo,
-      agentDir: cfg.agentDir,
-      targetDir: cfg.targetDir,
-      localConfigDir: cfg.localConfigDir,
-      overrideMode: cfg.overrideMode,
-    },
-    result: SkillResult,
-  });
+  try {
+    const harness = await init(agent, { tools: docs?.tools ?? [] });
+    const session = await harness.session();
 
-  // Post deterministically from the structured result — the model doesn't post.
-  const posted = targetRepo ? await postReview(session, prNumber, targetRepo, renderReview(data)) : false;
-  if (!posted) console.error(`Failed to post review to ${targetRepo}#${prNumber}`);
+    // Activate the global review skill. It layers the central skills/prompts in
+    // `agentDir` with any per-repo overrides in `localConfigDir` (per
+    // `overrideMode`), fetches the diff with `gh`, and returns its findings.
+    const { data } = await session.skill('code-review', {
+      model: cfg.model,
+      args: {
+        prNumber,
+        repo: targetRepo,
+        agentDir: cfg.agentDir,
+        targetDir: cfg.targetDir,
+        localConfigDir: cfg.localConfigDir,
+        overrideMode: cfg.overrideMode,
+      },
+      result: SkillResult,
+    });
 
-  return { ...data, posted };
+    // Post deterministically from the structured result — the model doesn't post.
+    const posted = targetRepo ? await postReview(session, prNumber, targetRepo, renderReview(data)) : false;
+    if (!posted) console.error(`Failed to post review to ${targetRepo}#${prNumber}`);
+
+    return { ...data, posted };
+  } finally {
+    await docs?.close();
+  }
 }
 
 // Internal-only: no public HTTP route. This agent is invoked from CI via
