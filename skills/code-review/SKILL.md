@@ -79,17 +79,27 @@ binding.
 If, after resolution, there are no prompts at all, fall back to reviewing for
 correctness, security, and clear regressions.
 
-## Step 2 — Gather the PR
+## Step 2 — Gather the PR and the conversation so far
 
 ```bash
 gh pr view "$prNumber" --repo "$repo" --json title,body,author,baseRefName,headRefName,files
 gh pr diff "$prNumber" --repo "$repo"
+
+# Existing discussion: top-level comments, review summaries, and inline review
+# comments (so you don't repeat or contradict what's already been said).
+gh pr view "$prNumber" --repo "$repo" --json comments,reviews
+gh api "repos/$repo/pulls/$prNumber/comments" \
+  --jq '.[] | {path, line, user: .user.login, body}' 2>/dev/null || true
 ```
 
 Read the description to understand intent, then read the full diff. If the diff
 is large, focus your attention budget on the highest-risk files first
 (auth, payments, data access, migrations, concurrency, anything touching
 untrusted input).
+
+Skim the existing discussion. Your own prior reviews are the ones ending with
+the `🤖 Automated review` footer; everything else is humans. You'll use this in
+Step 3 — don't let it change *what* is correct, only what's worth saying now.
 
 ## Step 3 — Review
 
@@ -103,6 +113,21 @@ you want the author to change; capture for each:
 Do not create a finding per file, and do not narrate or praise the diff — if a
 change is fine, leave it out. It is normal and good for a solid PR to yield zero
 findings.
+
+**Factor in the existing discussion (Step 2) when it makes sense:**
+
+- Don't repeat a point already raised — by you in a prior review or by a human.
+  If your earlier finding now looks addressed in the current diff, drop it (or
+  briefly note it's resolved); if it's still unfixed, you may restate it.
+- Respect decisions already made. If a maintainer accepted an approach, asked
+  for something specific, or dismissed a concern, don't relitigate it — align
+  with it or, only if you have a genuinely new and serious reason, raise it once
+  and defer to them.
+- Focus on what's new since your last review rather than re-deriving the whole
+  PR, and if nothing new is worth raising, say so in one line instead of
+  repeating the previous review.
+- This shapes *what you say*, not *what is correct*: never suppress a real
+  `critical`/`major` just because the thread moved on.
 
 Hold yourself to the standing rules from the persona section above, and to the
 under-review repo's own conventions from Step 1.
