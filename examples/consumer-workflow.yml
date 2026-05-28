@@ -33,10 +33,28 @@ jobs:
 
       # --- Or review with Anthropic instead of GitHub Models -----------------
       # Drop `models: read` above, add ANTHROPIC_API_KEY as a repo secret, and
-      # use this step instead:
+      # use this step instead. Provider credentials go through env:, not action
+      # inputs — pi-ai reads them from the inherited process environment.
       #
       # - uses: <owner>/agents/actions/pr-review@main
+      #   env:
+      #     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       #   with:
       #     pr-number: ${{ github.event.pull_request.number }}
-      #     model: anthropic/claude-sonnet-4-6
-      #     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+      #     model:     anthropic/claude-sonnet-4-6
+
+      # --- Or review with Kimi K2.6 on Cloudflare Workers AI -----------------
+      # 262k context window, reasoning, vision, tool calling.
+      # Drop `models: read` above, add CLOUDFLARE_API_KEY (token with
+      # `Workers AI` → Read scope) and CLOUDFLARE_ACCOUNT_ID as repo secrets,
+      # then use this step instead. Provider credentials go through env:, not
+      # action inputs — pi-ai's cloudflare-workers-ai provider reads them from
+      # the inherited process environment.
+      #
+      # - uses: <owner>/agents/actions/pr-review@main
+      #   env:
+      #     CLOUDFLARE_API_KEY:    ${{ secrets.CLOUDFLARE_API_KEY }}
+      #     CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #   with:
+      #     pr-number: ${{ github.event.pull_request.number }}
+      #     model:     cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
