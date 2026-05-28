@@ -108,7 +108,7 @@ function renderReview(r: SkillResult): string {
       }
     }
   }
-  lines.push('', '_🤖 Automated review by the Flue PR review agent._');
+  lines.push('', '_🤖 Automated review by the Flipt [PR review agent](https://github.com/flipt-io/agents)._');
   return lines.join('\n');
 }
 
