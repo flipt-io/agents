@@ -10,12 +10,8 @@ inputs:
     description: 'owner/name the PR belongs to. Defaults to the calling repository.'
     required: false
     default: ${{ github.repository }}
-  anthropic-api-key:
-    description: 'Anthropic API key. Required for anthropic/* models; leave empty when using a github/* model.'
-    required: false
-    default: ''
   model:
-    description: 'Override the review model (e.g. anthropic/claude-opus-4-7, or github/openai/gpt-4o for GitHub Models). Defaults to the agent default.'
+    description: 'Override the review model (e.g. anthropic/claude-opus-4-7, github/openai/gpt-4o, or cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6). Defaults to the agent default.'
     required: false
     default: ''
   override-mode:
@@ -58,8 +54,11 @@ runs:
       shell: bash
       working-directory: ${{ steps.agent.outputs.dir }}
       env:
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         GH_TOKEN: ${{ inputs.github-token }}
+        # Provider creds (ANTHROPIC_API_KEY, CLOUDFLARE_API_KEY,
+        # CLOUDFLARE_ACCOUNT_ID, …) are inherited from the caller's workflow
+        # env — set them with `env:` on the `uses:` step or at job level.
+        # See actions/pr-review/README.md → Models.
         # Central skills/prompts live here; consumer overrides (if any) live in
         # <their repo>/.flue. The workflow layers them per override-mode.
         REVIEW_AGENT_DIR: ${{ steps.agent.outputs.dir }}

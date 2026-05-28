@@ -89,10 +89,23 @@ small for big diffs); a **paid** plan lifts that to production limits, which is
 what makes real reviews fit.
 
 Override per run with `REVIEW_MODEL` (locally) or the action's `model` input
-(CI): another GitHub model (e.g. `github/openai/gpt-4o`) or
-`anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`). The gpt-5 family
-is a reasoning model that needs the responses API / `max_completion_tokens`,
-which isn't wired up yet. See
+(CI):
+
+- another GitHub model (e.g. `github/openai/gpt-4o`),
+- `anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`),
+- `cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6` for Kimi K2.6 on Cloudflare
+  Workers AI — 262k context, reasoning, vision, tool calling, at $0.95/$4.00
+  per M input/output tokens. Set `CLOUDFLARE_API_KEY` (a token with
+  `Workers AI` → Read) and `CLOUDFLARE_ACCOUNT_ID`. No `app.ts` change is
+  needed: Flue resolves it through pi-ai's built-in `cloudflare-workers-ai`
+  catalog, which already flags the model as reasoning-capable.
+
+The `github/openai/gpt-5*` family is a reasoning model that needs the responses
+API / `max_completion_tokens` on the locally registered GitHub Models provider,
+which isn't wired up yet — it'll 400 through chat-completions. Reasoning models
+via `cloudflare-workers-ai/*` work today because the openai-completions adapter
+sends `max_completion_tokens` automatically when pi-ai's catalog marks the
+model as reasoning-capable. See
 [`actions/pr-review/README.md`](actions/pr-review/README.md#models).
 
 ## The PR Review agent

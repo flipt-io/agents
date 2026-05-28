@@ -37,14 +37,18 @@ Anthropic.
 
 ## Inputs
 
-| Input               | Required | Default               | Description |
-| ------------------- | -------- | --------------------- | ----------- |
-| `pr-number`         | yes      | —                     | PR number to review. |
-| `anthropic-api-key` | no       | —                     | Anthropic key. Required only for `anthropic/*` models. |
-| `model`             | no       | `github/openai/gpt-4.1` | Override the review model. |
-| `repo`              | no       | current repo          | `owner/name` of the PR. |
-| `override-mode`     | no       | `merge`               | `merge` or `replace` — how local overrides combine with defaults. |
-| `github-token`      | no       | `github.token`        | Token for `gh` and GitHub Models (needs `pull-requests: write`, and `models: read` for `github/*`). |
+| Input           | Required | Default                 | Description |
+| --------------- | -------- | ----------------------- | ----------- |
+| `pr-number`     | yes      | —                       | PR number to review. |
+| `model`         | no       | `github/openai/gpt-4.1` | Override the review model. |
+| `repo`          | no       | current repo            | `owner/name` of the PR. |
+| `override-mode` | no       | `merge`                 | `merge` or `replace` — how local overrides combine with defaults. |
+| `github-token`  | no       | `github.token`          | Token for `gh` and GitHub Models (needs `pull-requests: write`, and `models: read` for `github/*`). |
+
+Provider credentials (`ANTHROPIC_API_KEY`, `CLOUDFLARE_API_KEY`,
+`CLOUDFLARE_ACCOUNT_ID`, …) are read from the workflow environment — pass them
+via `env:` on the `uses:` step (or at the job level) rather than as inputs.
+See [Models](#models) for the full list per provider.
 
 ## Per-repo overrides (`.flue/`)
 
@@ -98,11 +102,39 @@ OpenAI-chat-completions compatible). Three ways to run:
   production limits, which is what makes normal PRs fit. `github/openai/gpt-4o`
   works the same way.
 - **gpt-5 family.** `github/openai/gpt-5` / `gpt-5-mini` are reasoning models
-  that require the responses API / `max_completion_tokens`, which this provider
-  doesn't wire up yet — they'll 400 through the chat-completions path. Not
-  supported as-is.
-- **Anthropic.** Set `model: anthropic/claude-sonnet-4-6` and pass
-  `anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}`. Drop `models: read`.
+  that require the responses API / `max_completion_tokens`, which the locally
+  registered GitHub Models provider doesn't wire up — they'll 400 through the
+  chat-completions path. Not supported via `github/*` as-is.
+- **Anthropic.** Set `model: anthropic/claude-sonnet-4-6` and expose
+  `ANTHROPIC_API_KEY` via `env:` on the calling step:
+  ```yaml
+  - uses: <owner>/agents/actions/pr-review@main
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+      model:     anthropic/claude-sonnet-4-6
+  ```
+  Drop `models: read`.
+- **Cloudflare Workers AI.** Set
+  `model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6` (262k context,
+  reasoning, vision, tool calls) and expose `CLOUDFLARE_API_KEY` (a token
+  with `Workers AI` → Read scope) + `CLOUDFLARE_ACCOUNT_ID` via `env:` on
+  the calling step:
+  ```yaml
+  - uses: <owner>/agents/actions/pr-review@main
+    env:
+      CLOUDFLARE_API_KEY:    ${{ secrets.CLOUDFLARE_API_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+      model:     cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
+  ```
+  No `app.ts` registration is needed — Flue resolves the model through
+  pi-ai's built-in `cloudflare-workers-ai` catalog. Reasoning works because
+  the catalog flags the model as reasoning-capable and the
+  `openai-completions` adapter maps `maxTokens` → `max_completion_tokens`
+  accordingly. Drop `models: read`.
 
 Locally, set `GITHUB_MODELS_TOKEN` (a PAT with `models: read`) or
 `REVIEW_MODEL` + `ANTHROPIC_API_KEY`.
