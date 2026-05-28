@@ -64,6 +64,9 @@ Every agent here is assembled the same way — PR Review is the worked example:
   `code-review` skill only *analyzes* and returns `{ verdict, summary,
   findings }`; `workflows/pr-review.ts` renders that and posts the review via
   `gh`. (Smaller models can't be trusted to reliably run the post step.)
+- **MCP tools** can be attached at runtime: `connectMcpServer(url)`, then pass
+  the connection's `tools` to `init(agent, { tools })`. PR Review connects the
+  Flipt docs MCP so it can ground reviews in the documentation.
 
 The payload only ever carries *which* PR to review (`prNumber`, optional
 `repo`) — never the skills or prompts.
@@ -95,7 +98,9 @@ which isn't wired up yet. See
 ## The PR Review agent
 
 Reviews a pull request against the target repo's conventions and posts a
-verdict + findings. It's packaged as a composite GitHub Action other repos call.
+verdict + findings. It's packaged as a composite GitHub Action other repos call,
+and connects the Flipt docs MCP (`docs.flipt.io/mcp`, no auth) so it can ground
+findings in the documentation. Override or disable that via `REVIEW_DOCS_MCP_URL`.
 
 ### Use it in other repos
 
