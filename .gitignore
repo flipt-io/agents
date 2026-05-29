@@ -1,6 +1,5 @@
 node_modules/
 dist/
-.flue/
 *.log
 
 # Local secrets — never commit. See .env.example.

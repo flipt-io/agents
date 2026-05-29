@@ -35,7 +35,7 @@ agents/                       # pnpm workspace root — a fleet of agents
     pr-review/action.yml      # composite action consuming repos use
   examples/
     consumer-workflow.yml     # copy-paste workflow for a consuming repo
-    sample-consumer/.flue/    # example per-repo overrides
+    sample-consumer/.agents/  # example per-repo overrides
   app.ts                      # runtime entry: registers model providers (incl. GitHub Models)
   flue.config.ts              # default target (node)
   .github/workflows/
@@ -146,11 +146,10 @@ jobs:
 
 ### Per-repo overrides
 
-A consuming repo can tailor reviews with a `.flue/` directory at its root
-(`prompts/`, `skills/`, `personas/`, `AGENTS.md`) — the canonical Flue source
-dir, so it can hold overrides for every fleet agent, not just this one. The
-`override-mode` input controls whether those `merge` with the central defaults
-(default) or `replace` them. Full details in
+A consuming repo can tailor reviews with an `.agents/` directory at its root
+(`prompts/`, `skills/`, `personas/`), so it can hold overrides for every fleet
+agent, not just this one. The `override-mode` input controls whether those
+`merge` with the central defaults (default) or `replace` them. Full details in
 [`actions/pr-review/README.md`](actions/pr-review/README.md).
 
 ### Run it locally

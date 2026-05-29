@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4 # so the agent can see this repo's .flue/ overrides
+      - uses: actions/checkout@v4 # so the agent can see this repo's .agents/ overrides
 
       - uses: <owner>/agents/actions/pr-review@main # @main = always-latest skills/prompts; pin @v1 for reproducible
         with:

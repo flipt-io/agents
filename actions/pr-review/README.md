@@ -50,25 +50,23 @@ Provider credentials (`ANTHROPIC_API_KEY`, `CLOUDFLARE_API_KEY`,
 via `env:` on the `uses:` step (or at the job level) rather than as inputs.
 See [Models](#models) for the full list per provider.
 
-## Per-repo overrides (`.flue/`)
+## Per-repo overrides (`.agents/`)
 
-A consuming repo can tailor reviews by adding a `.flue/` directory at its root —
-the canonical Flue source location, so the same directory can hold overrides for
-every fleet agent that reviews the repo, not just this one. Anything present is
-layered on top of (or replaces) the central defaults according to
-`override-mode`:
+A consuming repo can tailor reviews by adding an `.agents/` directory at its root,
+so the same directory can hold overrides for every fleet agent that reviews the
+repo, not just this one. Anything present is layered on top of (or replaces) the
+central defaults according to `override-mode`:
 
 ```
-.flue/
-  AGENTS.md            # this repo's conventions/standards (context the reviewer respects)
+.agents/
   prompts/*.md         # review priorities for this repo
   skills/<name>/SKILL.md   # extra review skills (or a code-review skill to replace the default)
   personas/*.md        # repo-specific reviewer personas for focused passes
 ```
 
 > The reviewer's own persona lives in the central `code-review` skill. A repo's
-> `AGENTS.md` (root or `.flue/`) describes *that* repo — the reviewer reads it
-> for context and holds the PR to those standards.
+> root `AGENTS.md` describes *that* repo — the reviewer reads it for context and
+> holds the PR to those standards.
 
 - **`merge` (default):** central defaults apply first, then the repo's local
   files refine them (local wins on conflict).
@@ -77,7 +75,10 @@ layered on top of (or replaces) the central defaults according to
   `replace`, a local `skills/code-review/SKILL.md` supersedes the default review
   methodology entirely.
 
-If a repo ships no `.flue/`, it just gets the central defaults.
+Subdirectories the reviewer doesn't recognize (e.g. a repo's `.agents/commands/`)
+are simply ignored, and `README.md` files in `prompts/` and `personas/` are
+skipped. If a repo ships no `.agents/` directory, it just gets the central
+defaults.
 
 ## How it works
 
