@@ -67,8 +67,8 @@ function resolveConfig(env: Record<string, string | undefined>) {
     agentDir: env.REVIEW_AGENT_DIR || '.',
     // The checked-out repo under review (its source + its own AGENTS.md/README).
     targetDir: env.REVIEW_TARGET_DIR || '',
-    // The under-review repo's optional `.flue/` overrides; '' when absent.
-    localConfigDir: env.REVIEW_TARGET_DIR ? `${env.REVIEW_TARGET_DIR}/.flue` : '',
+    // The under-review repo's optional `.agents/` overrides; '' when absent.
+    localConfigDir: env.REVIEW_TARGET_DIR ? `${env.REVIEW_TARGET_DIR}/.agents` : '',
     // How local overrides combine with central defaults.
     overrideMode: env.REVIEW_OVERRIDE_MODE === 'replace' ? 'replace' : 'merge',
     // Optional per-run model override (empty string -> use agent default).

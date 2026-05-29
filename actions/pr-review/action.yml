@@ -15,7 +15,7 @@ inputs:
     required: false
     default: ''
   override-mode:
-    description: 'How a consuming repo .flue/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
+    description: 'How a consuming repo .agents/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
     required: false
     default: 'merge'
   github-token:
@@ -60,7 +60,7 @@ runs:
         # env — set them with `env:` on the `uses:` step or at job level.
         # See actions/pr-review/README.md → Models.
         # Central skills/prompts live here; consumer overrides (if any) live in
-        # <their repo>/.flue. The workflow layers them per override-mode.
+        # <their repo>/.agents. The workflow layers them per override-mode.
         REVIEW_AGENT_DIR: ${{ steps.agent.outputs.dir }}
         REVIEW_TARGET_DIR: ${{ github.workspace }}
         REVIEW_OVERRIDE_MODE: ${{ inputs.override-mode }}

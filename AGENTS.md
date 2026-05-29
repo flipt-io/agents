@@ -12,7 +12,7 @@ holds one agent — a pull-request review agent — with room for more under
 `workflows/`.
 
 - **Runtime:** Flue `0.8.0`, TypeScript, Node ≥ 22, pnpm.
-- **Layout:** root layout (agents in `./workflows`, not `./.flue`).
+- **Layout:** root layout (agents in `./workflows`, not `./.agents`).
 
 ## Project map
 
@@ -24,7 +24,7 @@ holds one agent — a pull-request review agent — with room for more under
 | `personas/*.ts` | `defineAgentProfile()` subagents, exported via `personas/index.ts`. |
 | `app.ts` | Runtime app entry; registers model providers (e.g. GitHub Models) and exports `flue()`. |
 | `actions/pr-review/` | Composite GitHub Action consuming repos use. |
-| `examples/` | Copy-paste consumer workflow + a sample `.flue/` override. |
+| `examples/` | Copy-paste consumer workflow + a sample `.agents/` override. |
 | `flue.config.ts` | Default build/run target (node). |
 
 ## Commands
@@ -54,6 +54,6 @@ finishing.
 
 ## Distribution
 
-Consuming repos call the composite action (`actions/pr-review`) and may ship a
-`.flue/` directory to override skills/prompts/personas per repo. See
+Consuming repos call the composite action (`actions/pr-review`) and may ship an
+`.agents/` directory to override skills/prompts/personas per repo. See
 [`actions/pr-review/README.md`](actions/pr-review/README.md).

@@ -15,7 +15,7 @@ these inputs:
   `prompts/` and `skills/`).
 - `targetDir` — absolute path to the checked-out repo under review (its source,
   README, and its own `AGENTS.md`), or empty if not available.
-- `localConfigDir` — absolute path to the under-review repo's `.flue/`
+- `localConfigDir` — absolute path to the under-review repo's `.agents/`
   overrides, or empty if it ships none.
 - `overrideMode` — `merge` (defaults + local) or `replace` (local only).
 
@@ -57,7 +57,8 @@ binding.
    conventions, and standards — then hold the PR to *those* standards, not just
    generic ones.
 
-2. **Review priorities (prompts).** Build the effective prompt set:
+2. **Review priorities (prompts).** Build the effective prompt set (ignore any
+   `README.md` — it documents the directory, it isn't a prompt):
    - Central: every file in `"$agentDir"/prompts/*.md`, in filename order.
    - Local (if `localConfigDir` set): every file in
      `"$localConfigDir"/prompts/*.md`, in filename order.
@@ -144,9 +145,9 @@ specialized persona and fold its findings into yours:
 - `security` — security-only pass (injection, authZ, secrets, SSRF, …).
 - `correctness` — traces logic for off-by-one, null handling, race conditions.
 
-If `localConfigDir` is set, also read any `"$localConfigDir"/personas/*.md` —
-each is a repo-specific reviewer persona; adopt its lens for a focused pass when
-the diff calls for it.
+If `localConfigDir` is set, also read any `"$localConfigDir"/personas/*.md`
+(ignore any `README.md`) — each is a repo-specific reviewer persona; adopt its
+lens for a focused pass when the diff calls for it.
 
 Delegate only when it earns its keep; for small or low-risk diffs, review them
 yourself.
