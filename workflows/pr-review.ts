@@ -45,6 +45,13 @@ const agent = createAgent((ctx) => ({
   // reasoning model that needs max_completion_tokens via the responses API, so
   // it isn't the default here.) Override per run with REVIEW_MODEL.
   model: 'github/openai/gpt-4.1',
+  // Reasoning effort. Flue defaults to "medium"; reasoning models (Kimi K2.6,
+  // the gpt-5 family) map this to their reasoning budget. A PR review is a
+  // bounded, well-specified task — the skill spells out exactly what to do — so
+  // "low" keeps the model decisive instead of spending minutes deliberating,
+  // which is where the runtime and token cost balloon. Non-reasoning models
+  // (the gpt-4.1 default) ignore it. Bump back up if review quality regresses.
+  thinkingLevel: 'low',
   // Global skills — applied to every PR.
   skills: [codeReview],
   // Global personas — focused subagents the review can delegate to.
