@@ -2,12 +2,12 @@ import {
   connectMcpServer,
   createAgent,
   type FlueContext,
-  type FlueSession,
   type McpServerConnection,
   type WorkflowRouteHandler,
 } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
+import { postReview, renderReview } from '../lib/review-comments.ts';
 
 // ---------------------------------------------------------------------------
 // Global skills
@@ -98,46 +98,6 @@ const SkillResult = v.object({
 });
 type SkillResult = v.InferOutput<typeof SkillResult>;
 
-const VERDICT_LABEL: Record<SkillResult['verdict'], string> = {
-  approve: 'approve',
-  comment: 'comment',
-  request_changes: 'request changes',
-};
-
-// Render the review as a single markdown comment body.
-function renderReview(r: SkillResult): string {
-  const lines = [`**Verdict: ${VERDICT_LABEL[r.verdict]}**`, '', r.summary.trim()];
-  if (r.findings.length > 0) {
-    for (const file of [...new Set(r.findings.map((f) => f.file))]) {
-      lines.push('', `### ${file}`);
-      for (const f of r.findings.filter((f) => f.file === file)) {
-        lines.push(`- **${f.severity}**${f.line ? ` (L${f.line})` : ''}: ${f.comment}`);
-      }
-    }
-  }
-  lines.push('', '_🤖 Automated review by the Flipt [PR review agent](https://github.com/flipt-io/agents)._');
-  return lines.join('\n');
-}
-
-// Post the review from the workflow (deterministic — the model doesn't post).
-// Writes the body to a sandbox file first so the multi-line markdown needs no
-// shell escaping, then submits a comment review via `gh`, falling back to a
-// plain PR comment if review submission is restricted. Returns whether it posted.
-async function postReview(
-  session: FlueSession,
-  prNumber: number,
-  repo: string,
-  body: string,
-): Promise<boolean> {
-  const bodyPath = '/tmp/flue-review.md';
-  await session.fs.writeFile(bodyPath, body);
-  const target = `${prNumber} --repo '${repo}' --body-file ${bodyPath}`;
-  for (const cmd of [`gh pr review ${target} --comment`, `gh pr comment ${target}`]) {
-    const { exitCode } = await session.shell(cmd);
-    if (exitCode === 0) return true;
-  }
-  return false;
-}
 
 export async function run({ init, payload, env }: FlueContext) {
   const { prNumber, repo } = v.parse(PayloadSchema, payload);
