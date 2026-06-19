@@ -8,6 +8,13 @@ import {
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 import { postReview, renderReview } from '../lib/review-comments.ts';
+import {
+  parseReviewStats,
+  resolveReviewBudget,
+  reviewStatsCommand,
+  timeoutReviewResult,
+  type ReviewStats,
+} from '../lib/review-timeout.ts';
 
 // ---------------------------------------------------------------------------
 // Global skills
@@ -121,21 +128,49 @@ export async function run({ init, payload, env }: FlueContext) {
     const harness = await init(agent, { tools: docs?.tools ?? [] });
     const session = await harness.session();
 
+    const stats: ReviewStats = { changedFiles: 999, additions: 1_000, deletions: 0 };
+    if (targetRepo) {
+      try {
+        const result = await harness.shell(reviewStatsCommand(prNumber, targetRepo), {
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (result.exitCode === 0) {
+          Object.assign(stats, parseReviewStats(result.stdout));
+        } else {
+          console.error(`Failed to fetch PR stats for ${targetRepo}#${prNumber}; using conservative review budget.`);
+        }
+      } catch {
+        console.error(`Timed out fetching PR stats for ${targetRepo}#${prNumber}; using conservative review budget.`);
+      }
+    }
+    const reviewBudget = resolveReviewBudget(stats, env);
+
     // Activate the global review skill. It layers the central skills/prompts in
     // `agentDir` with any per-repo overrides in `localConfigDir` (per
     // `overrideMode`), fetches the diff with `gh`, and returns its findings.
-    const { data } = await session.skill('code-review', {
-      model: cfg.model,
-      args: {
-        prNumber,
-        repo: targetRepo,
-        agentDir: cfg.agentDir,
-        targetDir: cfg.targetDir,
-        localConfigDir: cfg.localConfigDir,
-        overrideMode: cfg.overrideMode,
-      },
-      result: SkillResult,
-    });
+    // REVIEW_TIMEOUT_MS overrides the tier-derived hard wall-clock kill switch.
+    const reviewSignal = AbortSignal.timeout(reviewBudget.timeoutMs);
+    let data: SkillResult;
+
+    try {
+      ({ data } = await session.skill('code-review', {
+        model: cfg.model,
+        signal: reviewSignal,
+        args: {
+          prNumber,
+          repo: targetRepo,
+          agentDir: cfg.agentDir,
+          targetDir: cfg.targetDir,
+          localConfigDir: cfg.localConfigDir,
+          overrideMode: cfg.overrideMode,
+          reviewBudget,
+        },
+        result: SkillResult,
+      }));
+    } catch (error) {
+      if (!reviewSignal.aborted) throw error;
+      data = timeoutReviewResult(reviewBudget.timeoutMs);
+    }
 
     // Post deterministically from the structured result — the model doesn't post.
     const posted = targetRepo ? await postReview(session, prNumber, targetRepo, renderReview(data)) : false;

@@ -18,6 +18,10 @@ these inputs:
 - `localConfigDir` — absolute path to the under-review repo's `.agents/`
   overrides, or empty if it ships none.
 - `overrideMode` — `merge` (defaults + local) or `replace` (local only).
+- `reviewBudget` — the workflow-computed effort budget for this PR. It includes
+  `tier`, `timeoutMs`, `maxToolCalls`, `allowSubagents`, `scope`, and diff
+  `stats` (`changedFiles`, `additions`, `deletions`). The workflow enforces the
+  timeout; you must shape your review to fit the rest.
 
 Throughout, refer to the PR with `gh`'s `--repo "$repo"` and the number
 `prNumber`. The `gh` CLI is authenticated via `GH_TOKEN`.
@@ -49,6 +53,10 @@ apply, regardless of repo or override:
   whole PR, or keep hunting for marginal nits once you have the real issues. A
   fast, confident review of the things that matter is the goal — extra
   deliberation rarely changes the verdict and burns time and tokens.
+- **Respect `reviewBudget`.** Treat `maxToolCalls` as a hard cap for shell/docs
+  calls you initiate, and never delegate when `allowSubagents` is false. Use
+  `scope` to decide how exhaustive to be. For `large` PRs, explicitly run a
+  scoped high-risk review rather than trying to inspect everything.
 
 ## Step 1 — Load guidance and repo context
 
@@ -98,10 +106,10 @@ gh api "repos/$repo/pulls/$prNumber/comments" \
   --jq '.[] | {path, line, user: .user.login, body}' 2>/dev/null || true
 ```
 
-Read the description to understand intent, then read the full diff. If the diff
-is large, focus your attention budget on the highest-risk files first
-(auth, payments, data access, migrations, concurrency, anything touching
-untrusted input).
+Read the description to understand intent, then read the diff according to
+`reviewBudget.scope`. If the diff is large, focus your attention budget on the
+highest-risk files first (auth, payments, data access, migrations, concurrency,
+anything touching untrusted input).
 
 Skim the existing discussion. Your own prior reviews are the ones ending with
 the `🤖 Automated review` footer; everything else is humans. You'll use this in
