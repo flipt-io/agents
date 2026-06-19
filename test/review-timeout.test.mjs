@@ -8,8 +8,8 @@ import {
   timeoutReviewResult,
 } from '../lib/review-timeout.ts';
 
-test('resolveReviewTimeoutMs defaults to eight minutes', () => {
-  assert.equal(resolveReviewTimeoutMs({}), 8 * 60_000);
+test('resolveReviewTimeoutMs defaults to a near job-timeout guardrail', () => {
+  assert.equal(resolveReviewTimeoutMs({}), 25 * 60_000);
 });
 
 test('resolveReviewTimeoutMs accepts REVIEW_TIMEOUT_MS', () => {
@@ -17,8 +17,8 @@ test('resolveReviewTimeoutMs accepts REVIEW_TIMEOUT_MS', () => {
 });
 
 test('resolveReviewTimeoutMs ignores invalid values', () => {
-  assert.equal(resolveReviewTimeoutMs({ REVIEW_TIMEOUT_MS: 'nope' }), 8 * 60_000);
-  assert.equal(resolveReviewTimeoutMs({ REVIEW_TIMEOUT_MS: '0' }), 8 * 60_000);
+  assert.equal(resolveReviewTimeoutMs({ REVIEW_TIMEOUT_MS: 'nope' }), 25 * 60_000);
+  assert.equal(resolveReviewTimeoutMs({ REVIEW_TIMEOUT_MS: '0' }), 25 * 60_000);
 });
 
 test('reviewStatsCommand quotes repo names', () => {
@@ -41,6 +41,17 @@ test('resolveReviewBudget chooses tiers from PR size', () => {
   assert.equal(resolveReviewBudget({ changedFiles: 8, additions: 200, deletions: 100 }, {}).tier, 'small');
   assert.equal(resolveReviewBudget({ changedFiles: 20, additions: 700, deletions: 200 }, {}).tier, 'medium');
   assert.equal(resolveReviewBudget({ changedFiles: 40, additions: 1200, deletions: 100 }, {}).tier, 'large');
+});
+
+test('resolveReviewBudget keeps hard timeout independent of PR size', () => {
+  for (const stats of [
+    { changedFiles: 2, additions: 50, deletions: 25 },
+    { changedFiles: 8, additions: 200, deletions: 100 },
+    { changedFiles: 20, additions: 700, deletions: 200 },
+    { changedFiles: 40, additions: 1200, deletions: 100 },
+  ]) {
+    assert.equal(resolveReviewBudget(stats, {}).timeoutMs, 25 * 60_000);
+  }
 });
 
 test('resolveReviewBudget lets REVIEW_TIMEOUT_MS override tier timeout', () => {

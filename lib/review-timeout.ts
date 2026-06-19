@@ -1,4 +1,4 @@
-const DEFAULT_REVIEW_TIMEOUT_MS = 8 * 60_000;
+const DEFAULT_REVIEW_TIMEOUT_MS = 25 * 60_000;
 
 export type ReviewStats = {
   changedFiles: number;
@@ -43,7 +43,7 @@ export function resolveReviewBudget(stats: ReviewStats, env: Record<string, stri
     stats.changedFiles <= 3 && lines <= 100
       ? {
           tier: 'tiny' as const,
-          timeoutMs: 3 * 60_000,
+          timeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
           maxToolCalls: 6,
           allowSubagents: false,
           scope: 'Review the diff directly. Do not delegate. Return as soon as concrete findings are clear.',
@@ -51,7 +51,7 @@ export function resolveReviewBudget(stats: ReviewStats, env: Record<string, stri
       : stats.changedFiles <= 10 && lines <= 400
         ? {
             tier: 'small' as const,
-            timeoutMs: 5 * 60_000,
+            timeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
             maxToolCalls: 10,
             allowSubagents: false,
             scope: 'Review the whole diff, with brief repo-context lookups only when needed. Do not delegate.',
@@ -59,14 +59,14 @@ export function resolveReviewBudget(stats: ReviewStats, env: Record<string, stri
         : stats.changedFiles <= 25 && lines <= 1_000
           ? {
               tier: 'medium' as const,
-              timeoutMs: 8 * 60_000,
+              timeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
               maxToolCalls: 16,
               allowSubagents: true,
               scope: 'Review high-risk files first, then the rest of the diff if budget remains. Delegate at most once for clear security or correctness risk.',
             }
           : {
               tier: 'large' as const,
-              timeoutMs: 12 * 60_000,
+              timeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
               maxToolCalls: 20,
               allowSubagents: true,
               scope: 'Run a scoped review: prioritize auth, data access, migrations, concurrency, public APIs, and untrusted input. Do not attempt exhaustive coverage.',
