@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "flue dev",
     "build": "flue build",
-    "review": "flue run pr-review"
+    "review": "flue run pr-review",
+    "issue-health": "flue run issue-health"
   },
   "engines": {
     "node": ">=22"
