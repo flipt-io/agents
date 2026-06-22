@@ -1,0 +1,59 @@
+# Copy this into a consuming repo as `.github/workflows/issue-health.yml`.
+# Replace flipt-io/agents with the org/user and repo that hosts the agents repo
+# if you run a fork.
+#
+# Default model is github/openai/gpt-4.1 via GitHub Models — the built-in
+# GITHUB_TOKEN authenticates it, so no API key is needed, but the token needs
+# `models: read` (below). The issue comment and existing-label application use
+# `issues: write`.
+name: Issue Health Check
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  models: read
+
+jobs:
+  issue-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4 # so the agent can see this repo's .agents/ overrides
+
+      - uses: flipt-io/agents/actions/issue-health@main # @main = always-latest skills/prompts; pin @v1 for reproducible
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          # Optional:
+          # comment-mode: always          # always | needs-improvement | off
+          # label-mode: existing-only     # existing-only | off; never creates labels
+          # model: github/openai/gpt-4o   # another GitHub model
+          # override-mode: merge          # or: replace
+
+      # --- Or use Anthropic instead of GitHub Models ------------------------
+      # Drop `models: read` above, add ANTHROPIC_API_KEY as a repo secret, and
+      # use this step instead. Provider credentials go through env:, not action
+      # inputs — pi-ai reads them from the inherited process environment.
+      #
+      # - uses: flipt-io/agents/actions/issue-health@main
+      #   env:
+      #     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      #   with:
+      #     issue-number: ${{ github.event.issue.number }}
+      #     model: anthropic/claude-sonnet-4-6
+
+      # --- Or use Kimi K2.6 on Cloudflare Workers AI ------------------------
+      # Drop `models: read` above, add CLOUDFLARE_API_KEY (token with
+      # `Workers AI` → Read scope) and CLOUDFLARE_ACCOUNT_ID as repo secrets,
+      # then use this step instead.
+      #
+      # - uses: flipt-io/agents/actions/issue-health@main
+      #   env:
+      #     CLOUDFLARE_API_KEY:    ${{ secrets.CLOUDFLARE_API_KEY }}
+      #     CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #   with:
+      #     issue-number: ${{ github.event.issue.number }}
+      #     model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
