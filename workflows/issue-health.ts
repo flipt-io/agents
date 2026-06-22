@@ -2,10 +2,14 @@ import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHand
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 import {
+  ISSUE_HEALTH_ISSUE_TYPES,
+  ISSUE_HEALTH_VERDICTS,
   applyIssueHealthLabels,
   fetchExistingIssueLabels,
   postIssueHealthComment,
   renderIssueHealthComment,
+  resolveIssueHealthConfig,
+  shouldPostIssueHealthComment,
   type IssueHealthCommentMode,
   type IssueHealthLabelMode,
 } from '../lib/issue-health.ts';
@@ -32,9 +36,6 @@ const PayloadSchema = v.object({
   repo: v.optional(v.string()),
 });
 
-const IssueHealthCommentModeSchema = v.picklist(['always', 'needs-improvement', 'off']);
-const IssueHealthLabelModeSchema = v.picklist(['existing-only', 'off']);
-
 const IssueLabelSchema = v.object({
   name: v.string(),
 });
@@ -54,8 +55,8 @@ const IssueSchema = v.object({
 type Issue = v.InferOutput<typeof IssueSchema>;
 
 const SkillResult = v.object({
-  issueType: v.picklist(['bug', 'feature', 'docs', 'question', 'other']),
-  verdict: v.picklist(['well_scoped', 'mostly_actionable', 'needs_info', 'not_actionable']),
+  issueType: v.picklist(ISSUE_HEALTH_ISSUE_TYPES),
+  verdict: v.picklist(ISSUE_HEALTH_VERDICTS),
   score: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)),
   summary: v.string(),
   missingInfo: v.array(v.string()),
@@ -75,6 +76,8 @@ type Config = {
 };
 
 function resolveConfig(env: Record<string, string | undefined>): Config {
+  const issueHealthConfig = resolveIssueHealthConfig(env);
+
   return {
     // Central skills/prompts (this project). '.' for local runs.
     agentDir: env.ISSUE_HEALTH_AGENT_DIR || '.',
@@ -84,29 +87,12 @@ function resolveConfig(env: Record<string, string | undefined>): Config {
     localConfigDir: env.ISSUE_HEALTH_TARGET_DIR ? `${env.ISSUE_HEALTH_TARGET_DIR}/.agents` : '',
     overrideMode: env.ISSUE_HEALTH_OVERRIDE_MODE === 'replace' ? 'replace' : 'merge',
     model: env.ISSUE_HEALTH_MODEL || undefined,
-    commentMode: parseCommentMode(env.ISSUE_HEALTH_COMMENT_MODE),
-    labelMode: parseLabelMode(env.ISSUE_HEALTH_LABEL_MODE),
+    ...issueHealthConfig,
   };
-}
-
-function parseCommentMode(value: string | undefined): IssueHealthCommentMode {
-  if (!value) return 'always';
-  return v.parse(IssueHealthCommentModeSchema, value);
-}
-
-function parseLabelMode(value: string | undefined): IssueHealthLabelMode {
-  if (!value) return 'existing-only';
-  return v.parse(IssueHealthLabelModeSchema, value);
 }
 
 function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-function shouldPostComment(mode: IssueHealthCommentMode, result: SkillResult): boolean {
-  if (mode === 'off') return false;
-  if (mode === 'needs-improvement') return result.verdict === 'needs_info' || result.verdict === 'not_actionable';
-  return true;
 }
 
 type GitHubIo = Pick<FlueSession, 'shell' | 'fs'>;
@@ -169,7 +155,7 @@ export async function run({ init, payload, env }: FlueContext) {
     result: SkillResult,
   });
 
-  const commentPosted = shouldPostComment(cfg.commentMode, data)
+  const commentPosted = shouldPostIssueHealthComment(cfg.commentMode, data)
     ? await postIssueHealthComment(github, issueNumber, targetRepo, renderIssueHealthComment(data))
     : false;
 
