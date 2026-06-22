@@ -10,3 +10,5 @@ dist/
 
 .claude
 docs
+.worktrees
+
