@@ -1,0 +1,100 @@
+name: 'Issue Health Check'
+description: 'Analyze newly opened GitHub issues for actionability, comment with guidance, and apply only existing target-repo labels.'
+author: 'markphelps'
+
+inputs:
+  issue-number:
+    description: 'The GitHub issue number to analyze.'
+    required: true
+  repo:
+    description: 'owner/name the issue belongs to. Defaults to the calling repository.'
+    required: false
+    default: ${{ github.repository }}
+  model:
+    description: 'Override the issue-health model (e.g. github/openai/gpt-4o, anthropic/claude-sonnet-4-6, or cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6). Defaults to the agent default.'
+    required: false
+    default: ''
+  override-mode:
+    description: 'How a consuming repo .agents/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
+    required: false
+    default: 'merge'
+  github-token:
+    description: 'Token used by gh to read/comment on the issue, apply existing labels, and authenticate GitHub Models. Needs issues: write and models: read for the default github/* model.'
+    required: false
+    default: ${{ github.token }}
+  comment-mode:
+    description: 'When to post the health comment: "always", "needs-improvement", or "off".'
+    required: false
+    default: 'always'
+  label-mode:
+    description: 'How to apply labels: "existing-only" to apply only labels already present in the target repo, or "off".'
+    required: false
+    default: 'existing-only'
+
+runs:
+  using: 'composite'
+  steps:
+    # `github.action_path` is the checked-out agent repo; the Flue project root
+    # is two levels up from this action. Resolve it to an absolute path once.
+    - name: Resolve agent project dir
+      id: agent
+      shell: bash
+      run: echo "dir=$(cd '${{ github.action_path }}/../..' && pwd)" >> "$GITHUB_OUTPUT"
+
+    - name: Validate issue-health inputs
+      shell: bash
+      env:
+        INPUT_OVERRIDE_MODE: ${{ inputs.override-mode }}
+        INPUT_COMMENT_MODE: ${{ inputs.comment-mode }}
+        INPUT_LABEL_MODE: ${{ inputs.label-mode }}
+      run: |
+        case "$INPUT_OVERRIDE_MODE" in merge|replace) ;; *) echo 'override-mode must be merge or replace' >&2; exit 1 ;; esac
+        case "$INPUT_COMMENT_MODE" in always|needs-improvement|off) ;; *) echo 'comment-mode must be always, needs-improvement, or off' >&2; exit 1 ;; esac
+        case "$INPUT_LABEL_MODE" in existing-only|off) ;; *) echo 'label-mode must be existing-only or off' >&2; exit 1 ;; esac
+
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 11
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        # No setup-node pnpm cache: when this action is consumed from another
+        # repo, the lockfile lives under _actions/ (outside the caller's
+        # workspace), which setup-node's cache globber can't resolve. The
+        # frozen install below works fine without it.
+
+    - name: Install agent dependencies
+      shell: bash
+      working-directory: ${{ steps.agent.outputs.dir }}
+      run: pnpm install --frozen-lockfile
+
+    - name: Run Issue Health Check
+      shell: bash
+      working-directory: ${{ steps.agent.outputs.dir }}
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        # Provider creds (ANTHROPIC_API_KEY, CLOUDFLARE_API_KEY,
+        # CLOUDFLARE_ACCOUNT_ID, …) are inherited from the caller's workflow
+        # env — set them with `env:` on the `uses:` step or at job level.
+        # See actions/issue-health/README.md → Models.
+        # Central skills/prompts live here; consumer overrides (if any) live in
+        # <their repo>/.agents. The workflow layers them per override-mode.
+        ISSUE_HEALTH_AGENT_DIR: ${{ steps.agent.outputs.dir }}
+        ISSUE_HEALTH_TARGET_DIR: ${{ github.workspace }}
+        ISSUE_HEALTH_OVERRIDE_MODE: ${{ inputs.override-mode }}
+        ISSUE_HEALTH_MODEL: ${{ inputs.model }}
+        ISSUE_HEALTH_COMMENT_MODE: ${{ inputs.comment-mode }}
+        ISSUE_HEALTH_LABEL_MODE: ${{ inputs.label-mode }}
+        ISSUE_NUMBER: ${{ inputs.issue-number }}
+        ISSUE_REPO: ${{ inputs.repo }}
+      run: |
+        payload=$(node -e '
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
+          if (!Number.isInteger(issueNumber)) {
+            throw new Error("issue-number must be an integer");
+          }
+          process.stdout.write(JSON.stringify({ issueNumber, repo: process.env.ISSUE_REPO }));
+        ')
+        pnpm exec flue run issue-health --payload "$payload"

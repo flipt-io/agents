@@ -7,14 +7,14 @@ the [GitHub Models](https://docs.github.com/en/github-models) default
 (`github/openai/gpt-4.1`, no API key required), CI patterns, and reusable
 skills / prompts / personas.
 
-The first agent is **PR Review**; more will be added over time.
+The current agents are **PR Review** and **Issue Health Check**.
 
 ## Agents
 
 | Agent | What it does | How it runs |
 | --- | --- | --- |
 | **PR Review** (`workflows/pr-review.ts`) | Reviews a pull request against the target repo's conventions and posts a verdict + findings. | A composite GitHub Action other repos call — see [the PR Review agent](#the-pr-review-agent). |
-| _…more soon_ | | |
+| **Issue Health Check** (`workflows/issue-health.ts`) | Checks newly opened issues for actionability, missing information, privacy concerns, and existing target-repo labels. | A composite GitHub Action other repos call — see [the Issue Health Check agent](#the-issue-health-check-agent). |
 
 Adding one is cheap — see [Adding an agent](#adding-an-agent).
 
@@ -23,18 +23,22 @@ Adding one is cheap — see [Adding an agent](#adding-an-agent).
 ```
 agents/                       # pnpm workspace root — a fleet of agents
   workflows/
-    pr-review.ts              # one file per agent (PR Review is the first)
+    pr-review.ts              # one file per agent
+    issue-health.ts
   skills/
-    code-review/SKILL.md      # skills agents register (code-review is PR Review's)
+    code-review/SKILL.md      # skills agents register
+    issue-health/SKILL.md
   prompts/
     *.md                      # prompt guidance loaded at runtime
   personas/
     *.ts                      # subagents an agent can delegate to
   AGENTS.md                   # docs for agents working ON this repo (not the reviewer's persona)
   actions/
-    pr-review/action.yml      # composite action consuming repos use
+    pr-review/action.yml      # composite actions consuming repos use
+    issue-health/action.yml
   examples/
-    consumer-workflow.yml     # copy-paste workflow for a consuming repo
+    consumer-workflow.yml     # copy-paste workflows for consuming repos
+    issue-health-workflow.yml
     sample-consumer/.agents/  # example per-repo overrides
   app.ts                      # runtime entry: registers model providers (incl. GitHub Models)
   flue.config.ts              # default target (node)
@@ -60,16 +64,17 @@ Every agent here is assembled the same way — PR Review is the worked example:
   auto-discovers it at runtime, so the review process keeps project context, but
   it is not the reviewer's persona. Per-review context about the code being
   reviewed comes from the *target* repo's own `AGENTS.md`.
-- **Posting is deterministic, done by the workflow — not the model.** The
-  `code-review` skill only *analyzes* and returns `{ verdict, summary,
-  findings }`; `workflows/pr-review.ts` renders that and posts the review via
-  `gh`. (Smaller models can't be trusted to reliably run the post step.)
+- **GitHub mutations are deterministic, done by the workflow — not the model.**
+  Skills only *analyze* and return structured data; workflows render comments,
+  post them with `gh`, and apply any labels from deterministic code paths.
+  (Smaller models can't be trusted to reliably run mutation steps.)
 - **MCP tools** can be attached at runtime: `connectMcpServer(url)`, then pass
   the connection's `tools` to `init(agent, { tools })`. PR Review connects the
   Flipt docs MCP so it can ground reviews in the documentation.
 
-The payload only ever carries *which* PR to review (`prNumber`, optional
-`repo`) — never the skills or prompts.
+The payload only ever carries *which artifact* to inspect (for example
+`prNumber` or `issueNumber`, plus optional `repo`) — never the skills or
+prompts.
 
 ## Subagents / personas
 
@@ -88,8 +93,8 @@ no Anthropic key. On a **free** plan GitHub caps requests at ~8k tokens (too
 small for big diffs); a **paid** plan lifts that to production limits, which is
 what makes real reviews fit.
 
-Override per run with `REVIEW_MODEL` (locally) or the action's `model` input
-(CI):
+Override per run with `REVIEW_MODEL` or `ISSUE_HEALTH_MODEL` (locally), or the
+action's `model` input (CI):
 
 - another GitHub model (e.g. `github/openai/gpt-4o`),
 - `anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`),
@@ -162,6 +167,73 @@ pnpm exec flue run pr-review --payload '{"prNumber": 123, "repo": "owner/name"}'
 
 `flue run` builds the project, invokes the workflow, and prints the structured
 verdict as JSON.
+
+## The Issue Health Check agent
+
+Checks newly opened GitHub issues for actionability before a maintainer picks
+up triage. It fetches the live issue, asks the `issue-health` skill for
+structured analysis (`issueType`, `verdict`, hidden internal `score`,
+`summary`, `missingInfo`, `suggestedLabels`, and `redactionWarning`), then
+renders and posts one deterministic health-check/support comment.
+
+### Use it in other repos
+
+Consuming repos opt in with an `issues.opened` workflow that calls the composite
+action. See [`actions/issue-health/README.md`](actions/issue-health/README.md)
+and [`examples/issue-health-workflow.yml`](examples/issue-health-workflow.yml).
+
+```yaml
+# .github/workflows/issue-health.yml in the consuming repo
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: read
+  issues: write      # required: the workflow comments and may apply labels
+  models: read       # GitHub Models auth (no API key)
+jobs:
+  issue-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: <owner>/agents/actions/issue-health@main
+        with:
+          issue-number: ${{ github.event.issue.number }}
+```
+
+v1 runs only for newly opened issues. It does not respond to edits or reopens,
+create labels, edit issue bodies, close issues, or assign people. Labeling is
+existing-only by default: the workflow discovers labels from the target repo at
+runtime, filters model suggestions against those names, and applies only labels
+that already exist there. Set `label-mode: off` to disable labeling.
+
+The default `comment-mode` is `always`, so every opened issue gets one combined
+health-check/support comment. Set `comment-mode: needs-improvement` to comment
+only for `needs_info` / `not_actionable` results, or `comment-mode: off` to
+skip comments. When comments are enabled, the footer links to
+[GitHub Sponsors](https://github.com/sponsors/flipt-io) and
+[Flipt Pro](https://docs.flipt.io/v2/pro).
+
+### Per-repo overrides
+
+Issue Health Check uses the same `.agents/` override convention as PR Review.
+A consuming repo can add local prompts/skills/personas under `.agents/`, and the
+action's `override-mode` controls whether those files `merge` with the central
+defaults or `replace` them. Full details are in
+[`actions/issue-health/README.md`](actions/issue-health/README.md).
+
+### Run it locally
+
+```bash
+cp .env.example .env        # GITHUB_MODELS_TOKEN (models:read) + GH_TOKEN for gh
+pnpm install
+pnpm issue-health -- --payload '{"issueNumber":123,"repo":"owner/name"}'
+```
+
+`pnpm issue-health` runs the `flue run issue-health` package script, fetches the
+issue from `repo`, posts according to `ISSUE_HEALTH_COMMENT_MODE` (default
+`always`), applies labels according to `ISSUE_HEALTH_LABEL_MODE` (default
+`existing-only`), and prints the structured result as JSON.
 
 ## Adding an agent
 
