@@ -186,7 +186,10 @@ export function filterIssueHealthLabels(
   return labels;
 }
 
-export async function fetchExistingIssueLabels(session: FlueSession, repo: string): Promise<string[]> {
+type IssueHealthShell = Pick<FlueSession, 'shell'>;
+type IssueHealthShellFs = Pick<FlueSession, 'shell' | 'fs'>;
+
+export async function fetchExistingIssueLabels(session: IssueHealthShell, repo: string): Promise<string[]> {
   const { exitCode, stdout } = await session.shell(
     `gh label list --repo ${shellQuote(repo)} --limit 1000 --json name --jq ${shellQuote('.[].name')}`,
   );
@@ -199,7 +202,7 @@ export async function fetchExistingIssueLabels(session: FlueSession, repo: strin
 }
 
 export async function postIssueHealthComment(
-  session: FlueSession,
+  session: IssueHealthShellFs,
   issueNumber: number,
   repo: string,
   body: string,
@@ -214,7 +217,7 @@ export async function postIssueHealthComment(
 }
 
 export async function applyIssueHealthLabels(
-  session: FlueSession,
+  session: IssueHealthShell,
   issueNumber: number,
   repo: string,
   result: IssueHealthResult,
