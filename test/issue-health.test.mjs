@@ -101,9 +101,9 @@ test('resolveIssueHealthConfig defaults to always commenting and existing-label-
 
   assert.deepEqual(cfg, { commentMode: 'always', labelMode: 'existing-only' });
   assert.equal(shouldPostIssueHealthComment(cfg.commentMode, healthyResult), true);
-  assert.deepEqual(filterIssueHealthLabels(needsInfoResult, ['enhancement', 'needs-info']), [
-    'enhancement',
-    'needs-info',
+  assert.deepEqual(filterIssueHealthLabels(needsInfoResult, ['feature request', 'missing-info']), [
+    'feature request',
+    'missing-info',
   ]);
 });
 
@@ -118,29 +118,33 @@ test('resolveIssueHealthConfig rejects unknown modes', () => {
   assert.throws(() => resolveIssueHealthConfig({ ISSUE_HEALTH_LABEL_MODE: 'create-missing' }), /Invalid issue-health mode/);
 });
 
-test('filterIssueHealthLabels only returns labels that exist in the target repo', () => {
-  const labels = filterIssueHealthLabels(needsInfoResult, ['bug', 'enhancement', 'needs-info', 'needs-triage']);
+test('filterIssueHealthLabels only applies suggested labels that exist in the target repo', () => {
+  const labels = filterIssueHealthLabels(needsInfoResult, [
+    'bug',
+    'enhancement',
+    'feature request',
+    'missing-info',
+    'needs-triage',
+  ]);
 
-  assert.deepEqual(labels, ['enhancement', 'needs-info', 'needs-triage']);
+  assert.deepEqual(labels, ['feature request', 'missing-info']);
 });
 
-test('filterIssueHealthLabels ignores labels from unrelated repos unless passed as target repo labels', () => {
-  const unrelatedRepoLabels = ['security'];
+test('filterIssueHealthLabels does not map semantic suggestions to unrelated existing labels', () => {
   const labels = filterIssueHealthLabels(
     {
-      issueType: 'other',
+      issueType: 'feature',
       verdict: 'needs_info',
       score: 30,
       summary: 'The issue needs a clearer ask.',
       missingInfo: ['clear ask'],
-      suggestedLabels: unrelatedRepoLabels,
+      suggestedLabels: ['feature request', 'missing info', 'security'],
       redactionWarning: null,
     },
-    ['needs-triage'],
+    ['enhancement', 'needs-info', 'needs-triage'],
   );
 
-  assert.deepEqual(labels, ['needs-triage']);
-  assert.ok(!labels.includes('security'));
+  assert.deepEqual(labels, []);
 });
 
 test('filterIssueHealthLabels can be disabled', () => {
@@ -182,13 +186,13 @@ test('applyIssueHealthLabels filters before invoking gh issue edit and never cre
   };
 
   const result = await applyIssueHealthLabels(session, 123, 'owner/repo', needsInfoResult, [
-    'enhancement',
-    'needs-info',
+    'feature request',
+    'missing-info',
   ]);
 
-  assert.deepEqual(result, { labels: ['enhancement', 'needs-info'], applied: true });
+  assert.deepEqual(result, { labels: ['feature request', 'missing-info'], applied: true });
   assert.equal(commands.length, 1);
-  assert.match(commands[0], /^gh issue edit 123 --repo 'owner\/repo' --add-label 'enhancement' --add-label 'needs-info'$/);
+  assert.match(commands[0], /^gh issue edit 123 --repo 'owner\/repo' --add-label 'feature request' --add-label 'missing-info'$/);
   assert.doesNotMatch(commands[0], /label create|gh label/);
   assert.doesNotMatch(commands[0], /nonexistent-label/);
 });

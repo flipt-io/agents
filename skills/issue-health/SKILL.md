@@ -1,6 +1,6 @@
 ---
 name: issue-health
-description: Analyze a newly opened GitHub issue for actionability, missing information, privacy concerns, and semantic label suggestions. Return structured data only; the workflow handles comments and labels.
+description: Analyze a newly opened GitHub issue for actionability, missing information, privacy concerns, and repository label suggestions. Return structured data only; the workflow handles comments and labels.
 ---
 
 # Issue Health Check
@@ -14,7 +14,8 @@ You are given issue context such as:
 - issue title
 - issue body
 - issue author
-- current issue labels from the target repository
+- current labels already applied to the issue
+- `targetRepoLabels`: the labels that currently exist in the target repository
 - any repository or workflow context supplied in the request
 
 Use only the supplied context. Do not run `gh`, do not call GitHub APIs, do not
@@ -39,11 +40,11 @@ Canonical `IssueHealthResult` fields:
   important reason for the verdict.
 - `missingInfo`: a string array naming the specific information still needed.
   Use `[]` when nothing material is missing.
-- `suggestedLabels`: a string array of semantic or target-repository-like label
-  suggestions, such as `bug`, `feature`, `documentation`, `question`,
-  `needs-info`, `security`, or area names clearly implied by the issue. These are
-  suggestions only; workflow code filters them against labels that already exist
-  in the target repository. Do not assume missing labels can be created.
+- `suggestedLabels`: a string array of label suggestions chosen from
+  `targetRepoLabels`. Use `[]` when no existing target-repository label clearly
+  applies. These are suggestions only; workflow code filters them against labels
+  that already exist in the target repository. Do not assume missing labels can
+  be created.
 - `redactionWarning`: a string when the issue appears to include secrets,
   tokens, credentials, private URLs, personal data, or other sensitive content
   that should be redacted; otherwise `null`.
@@ -167,29 +168,22 @@ usually contain the smallest useful set of specific missing facts.
 
 ## Label suggestions
 
-Suggest semantic labels that describe the issue type, quality, risk, or affected
-area. Good suggestions are stable and repository-agnostic enough for workflow
-code to match against existing target-repository labels.
-
-Examples:
-
-- type labels: `bug`, `feature`, `documentation`, `question`
-- health labels: `needs-info`, `well-scoped`, `not-actionable`
-- risk labels: `security`, `privacy`
-- area labels clearly implied by the issue, such as `cli`, `api`, `ui`, `docs`,
-  or `deployment`
+Suggest labels only from the supplied `targetRepoLabels` list. Match the issue
+against the repository's existing label names for issue type, quality, risk, or
+affected area. If no label in `targetRepoLabels` clearly applies, return an empty
+array instead of inventing a generic label.
 
 Never claim a label was applied. Never create labels. Never base suggestions on
-labels from this agents repository; only the workflow may compare suggestions to
-existing labels fetched from the target repository.
+labels from this agents repository; use only `targetRepoLabels` supplied in the
+request.
 
 ## Safety and privacy
 
 Inspect the issue for likely secrets or sensitive information, including API
 keys, tokens, passwords, private keys, connection strings, personal data, private
 URLs, or proprietary logs. If found, set `redactionWarning` to a concise warning
-that the public comment can use to advise redaction. Also include an appropriate
-semantic label such as `security` or `privacy` when warranted.
+that the public comment can use to advise redaction. Suggest a privacy or security
+label only when an appropriate label exists in `targetRepoLabels`.
 
 Do not repeat sensitive values in `summary`, `missingInfo`, or
 `redactionWarning`; refer to the kind of sensitive content instead.

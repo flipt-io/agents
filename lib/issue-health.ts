@@ -66,39 +66,6 @@ const VERDICT_LABEL: Record<IssueHealthVerdict, string> = {
   not_actionable: 'Not actionable yet',
 };
 
-const ISSUE_TYPE_LABEL_CANDIDATES: Record<IssueType, string[]> = {
-  bug: ['bug'],
-  feature: ['enhancement', 'feature'],
-  docs: ['documentation', 'docs'],
-  question: ['question'],
-  other: ['needs-triage'],
-};
-
-const SEMANTIC_LABEL_CANDIDATES: Record<string, string[]> = {
-  bug: ['bug'],
-  defect: ['bug'],
-  error: ['bug'],
-  feature: ['enhancement', 'feature'],
-  enhancement: ['enhancement', 'feature'],
-  request: ['enhancement', 'feature'],
-  docs: ['documentation', 'docs'],
-  documentation: ['documentation', 'docs'],
-  doc: ['documentation', 'docs'],
-  question: ['question'],
-  support: ['question'],
-  help: ['question'],
-  'needs info': ['needs-info', 'needs info', 'more information needed'],
-  'needs information': ['needs-info', 'needs info', 'more information needed'],
-  'missing info': ['needs-info', 'needs info', 'more information needed'],
-  incomplete: ['needs-info', 'needs info', 'more information needed'],
-  'not actionable': ['needs-info', 'needs-triage', 'needs info'],
-  triage: ['needs-triage', 'triage'],
-  'needs triage': ['needs-triage', 'triage'],
-  security: ['security'],
-  secret: ['security'],
-  privacy: ['security'],
-};
-
 function parseMode<T extends string>(value: string | undefined, allowedModes: readonly T[], defaultMode: T): T {
   if (!value) return defaultMode;
   if (allowedModes.includes(value as T)) return value as T;
@@ -143,29 +110,6 @@ function addExistingLabel(
   const exact = existingByExactName.get(candidate);
   const existing = exact ?? existingByNormalizedName.get(normalizeLabel(candidate));
   if (existing && !labels.includes(existing)) labels.push(existing);
-}
-
-function addFirstExistingLabel(
-  labels: string[],
-  existingByExactName: Map<string, string>,
-  existingByNormalizedName: Map<string, string>,
-  candidates: string[],
-): void {
-  for (const candidate of candidates) {
-    const before = labels.length;
-    addExistingLabel(labels, existingByExactName, existingByNormalizedName, candidate);
-    if (labels.length > before) return;
-  }
-}
-
-function semanticCandidatesForSuggestion(suggestion: string): string[] {
-  const normalized = normalizeLabel(suggestion);
-  const direct = SEMANTIC_LABEL_CANDIDATES[normalized];
-  if (direct) return direct;
-
-  return Object.entries(SEMANTIC_LABEL_CANDIDATES)
-    .filter(([term]) => normalized.includes(term))
-    .flatMap(([, candidates]) => candidates);
 }
 
 export function renderIssueHealthComment(result: IssueHealthResult, options: RenderIssueHealthOptions = {}): string {
@@ -220,14 +164,7 @@ export function filterIssueHealthLabels(
 
   for (const suggestion of result.suggestedLabels) {
     addExistingLabel(labels, existingByExactName, existingByNormalizedName, suggestion);
-    addFirstExistingLabel(labels, existingByExactName, existingByNormalizedName, semanticCandidatesForSuggestion(suggestion));
   }
-
-  addFirstExistingLabel(labels, existingByExactName, existingByNormalizedName, ISSUE_TYPE_LABEL_CANDIDATES[result.issueType]);
-  if (result.verdict === 'needs_info' || result.verdict === 'not_actionable') {
-    addFirstExistingLabel(labels, existingByExactName, existingByNormalizedName, ['needs-info', 'needs info']);
-  }
-  addFirstExistingLabel(labels, existingByExactName, existingByNormalizedName, ['needs-triage', 'triage']);
 
   return labels;
 }
