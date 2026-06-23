@@ -12,6 +12,8 @@ test('PR review action supports a workflow-specific local config directory', () 
   assert.match(prAction, /Defaults to \.agents/);
   assert.match(prAction, /^        REVIEW_LOCAL_CONFIG_DIR: \$\{\{ inputs\.local-config-dir \}\}/m);
   assert.match(prWorkflow, /REVIEW_LOCAL_CONFIG_DIR/);
+  assert.match(prWorkflow, /from 'node:path'/);
+  assert.match(prWorkflow, /path\.join\(targetDir, configuredDir/);
   assert.match(prWorkflow, /resolveLocalConfigDir\(env\.REVIEW_TARGET_DIR, env\.REVIEW_LOCAL_CONFIG_DIR\)/);
 });
 
@@ -20,5 +22,7 @@ test('issue-health action supports a workflow-specific local config directory', 
   assert.match(issueAction, /Defaults to \.agents/);
   assert.match(issueAction, /^        ISSUE_HEALTH_LOCAL_CONFIG_DIR: \$\{\{ inputs\.local-config-dir \}\}/m);
   assert.match(issueWorkflow, /ISSUE_HEALTH_LOCAL_CONFIG_DIR/);
+  assert.match(issueWorkflow, /from 'node:path'/);
+  assert.match(issueWorkflow, /path\.join\(targetDir, configuredDir/);
   assert.match(issueWorkflow, /resolveLocalConfigDir\(env\.ISSUE_HEALTH_TARGET_DIR, env\.ISSUE_HEALTH_LOCAL_CONFIG_DIR\)/);
 });

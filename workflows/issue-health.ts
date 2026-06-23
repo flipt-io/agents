@@ -1,5 +1,6 @@
 import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHandler } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
+import path from 'node:path';
 import * as v from 'valibot';
 import {
   ISSUE_HEALTH_ISSUE_TYPES,
@@ -78,9 +79,9 @@ type Config = {
 function resolveLocalConfigDir(targetDir: string | undefined, localConfigDir: string | undefined): string {
   if (!targetDir) return '';
 
-  const configuredDir = localConfigDir?.trim() || '.agents';
+  const configuredDir = (localConfigDir?.trim() || '.agents').replace(/^\.\//, '').replace(/^[/\\]+/, '');
 
-  return `${targetDir}/${configuredDir.replace(/^\.\//, '').replace(/^\/+/, '')}`;
+  return path.join(targetDir, configuredDir);
 }
 
 function resolveConfig(env: Record<string, string | undefined>): Config {

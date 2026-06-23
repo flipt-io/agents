@@ -6,6 +6,7 @@ import {
   type WorkflowRouteHandler,
 } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
+import path from 'node:path';
 import * as v from 'valibot';
 import { postReview, renderReview } from '../lib/review-comments.ts';
 import {
@@ -76,9 +77,9 @@ const PayloadSchema = v.object({
 function resolveLocalConfigDir(targetDir: string | undefined, localConfigDir: string | undefined): string {
   if (!targetDir) return '';
 
-  const configuredDir = localConfigDir?.trim() || '.agents';
+  const configuredDir = (localConfigDir?.trim() || '.agents').replace(/^\.\//, '').replace(/^[/\\]+/, '');
 
-  return `${targetDir}/${configuredDir.replace(/^\.\//, '').replace(/^\/+/, '')}`;
+  return path.join(targetDir, configuredDir);
 }
 
 // Resolve where config lives, from env set by the GitHub Action. All have
