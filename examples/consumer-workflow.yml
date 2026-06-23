@@ -30,6 +30,7 @@ jobs:
           # Optional:
           # model: github/openai/gpt-4o    # another GitHub model
           # override-mode: merge           # or: replace
+          # local-config-dir: .agents/pr-review # isolate this agent's prompts from other agents
 
       # --- Or review with Anthropic instead of GitHub Models -----------------
       # Drop `models: read` above, add ANTHROPIC_API_KEY as a repo secret, and

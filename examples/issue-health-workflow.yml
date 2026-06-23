@@ -32,6 +32,7 @@ jobs:
           # label-mode: existing-only     # existing-only | off; never creates labels
           # model: github/openai/gpt-4o   # another GitHub model
           # override-mode: merge          # or: replace
+          # local-config-dir: .agents/issue-health # isolate this agent's prompts from other agents
 
       # --- Or use Anthropic instead of GitHub Models ------------------------
       # Drop `models: read` above, add ANTHROPIC_API_KEY as a repo secret, and

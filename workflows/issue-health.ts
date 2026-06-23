@@ -1,5 +1,6 @@
 import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHandler } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
+import path from 'node:path';
 import * as v from 'valibot';
 import {
   ISSUE_HEALTH_ISSUE_TYPES,
@@ -75,6 +76,14 @@ type Config = {
   labelMode: IssueHealthLabelMode;
 };
 
+function resolveLocalConfigDir(targetDir: string | undefined, localConfigDir: string | undefined): string {
+  if (!targetDir) return '';
+
+  const configuredDir = (localConfigDir?.trim() || '.agents').replace(/^\.\//, '').replace(/^[/\\]+/, '');
+
+  return path.join(targetDir, configuredDir);
+}
+
 function resolveConfig(env: Record<string, string | undefined>): Config {
   const issueHealthConfig = resolveIssueHealthConfig(env);
 
@@ -83,8 +92,8 @@ function resolveConfig(env: Record<string, string | undefined>): Config {
     agentDir: env.ISSUE_HEALTH_AGENT_DIR || '.',
     // Checked-out target repo, used as context when actions provide it.
     targetDir: env.ISSUE_HEALTH_TARGET_DIR || '',
-    // The target repo's optional `.agents/` overrides; '' when absent.
-    localConfigDir: env.ISSUE_HEALTH_TARGET_DIR ? `${env.ISSUE_HEALTH_TARGET_DIR}/.agents` : '',
+    // The target repo's optional local overrides; defaults to `.agents`.
+    localConfigDir: resolveLocalConfigDir(env.ISSUE_HEALTH_TARGET_DIR, env.ISSUE_HEALTH_LOCAL_CONFIG_DIR),
     overrideMode: env.ISSUE_HEALTH_OVERRIDE_MODE === 'replace' ? 'replace' : 'merge',
     model: env.ISSUE_HEALTH_MODEL || undefined,
     ...issueHealthConfig,
