@@ -73,6 +73,14 @@ const PayloadSchema = v.object({
   repo: v.optional(v.string()),
 });
 
+function resolveLocalConfigDir(targetDir: string | undefined, localConfigDir: string | undefined): string {
+  if (!targetDir) return '';
+
+  const configuredDir = localConfigDir?.trim() || '.agents';
+
+  return `${targetDir}/${configuredDir.replace(/^\.\//, '').replace(/^\/+/, '')}`;
+}
+
 // Resolve where config lives, from env set by the GitHub Action. All have
 // sensible fallbacks so a bare `flue run pr-review` still works locally.
 function resolveConfig(env: Record<string, string | undefined>) {
@@ -81,8 +89,8 @@ function resolveConfig(env: Record<string, string | undefined>) {
     agentDir: env.REVIEW_AGENT_DIR || '.',
     // The checked-out repo under review (its source + its own AGENTS.md/README).
     targetDir: env.REVIEW_TARGET_DIR || '',
-    // The under-review repo's optional `.agents/` overrides; '' when absent.
-    localConfigDir: env.REVIEW_TARGET_DIR ? `${env.REVIEW_TARGET_DIR}/.agents` : '',
+    // The under-review repo's optional local overrides; defaults to `.agents`.
+    localConfigDir: resolveLocalConfigDir(env.REVIEW_TARGET_DIR, env.REVIEW_LOCAL_CONFIG_DIR),
     // How local overrides combine with central defaults.
     overrideMode: env.REVIEW_OVERRIDE_MODE === 'replace' ? 'replace' : 'merge',
     // Optional per-run model override (empty string -> use agent default).

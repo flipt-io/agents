@@ -18,6 +18,10 @@ inputs:
     description: 'How a consuming repo .agents/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
     required: false
     default: 'merge'
+  local-config-dir:
+    description: 'Path in the target repository to .agents-compatible local overrides. Defaults to .agents.'
+    required: false
+    default: '.agents'
   github-token:
     description: 'Token used by gh to read/comment on the issue, apply existing labels, and authenticate GitHub Models. Needs issues: write and models: read for the default github/* model.'
     required: false
@@ -83,6 +87,7 @@ runs:
         # <their repo>/.agents. The workflow layers them per override-mode.
         ISSUE_HEALTH_AGENT_DIR: ${{ steps.agent.outputs.dir }}
         ISSUE_HEALTH_TARGET_DIR: ${{ github.workspace }}
+        ISSUE_HEALTH_LOCAL_CONFIG_DIR: ${{ inputs.local-config-dir }}
         ISSUE_HEALTH_OVERRIDE_MODE: ${{ inputs.override-mode }}
         ISSUE_HEALTH_MODEL: ${{ inputs.model }}
         ISSUE_HEALTH_COMMENT_MODE: ${{ inputs.comment-mode }}
