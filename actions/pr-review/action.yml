@@ -43,7 +43,8 @@ runs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: 22
+        # Flue 0.11.1 requires Node >=22.18.0.
+        node-version: '22.18.0'
         # No setup-node pnpm cache: when this action is consumed from another
         # repo, the lockfile lives under _actions/ (outside the caller's
         # workspace), which setup-node's cache globber can't resolve. The
