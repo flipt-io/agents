@@ -11,14 +11,15 @@
     "issue-health": "flue run issue-health"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18.0"
   },
   "dependencies": {
-    "@flue/runtime": "^0.8.0",
+    "@flue/runtime": "^0.11.1",
     "valibot": "^1.4.1"
   },
   "devDependencies": {
-    "@flue/cli": "^0.8.0",
-    "@types/node": "^25.9.1"
+    "@flue/cli": "^0.11.1",
+    "@types/node": "^25.9.1",
+    "wrangler": "^4.103.0"
   }
 }
