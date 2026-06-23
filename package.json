@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@flue/cli": "^0.11.1",
-    "@types/node": "^25.9.1",
-    "wrangler": "^4.103.0"
+    "@types/node": "^25.9.1"
   }
 }
