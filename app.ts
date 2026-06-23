@@ -1,4 +1,5 @@
-import { flue, registerProvider } from '@flue/runtime/app';
+import { registerProvider } from '@flue/runtime';
+import { flue } from '@flue/runtime/routing';
 
 // GitHub Models (https://docs.github.com/en/github-models) exposes an
 // OpenAI-chat-completions-compatible endpoint. Registering it as a Flue
