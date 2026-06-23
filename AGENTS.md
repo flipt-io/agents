@@ -11,7 +11,7 @@ A pnpm-workspace monorepo of [Flue](https://flueframework.com) agents. Today it
 holds one agent — a pull-request review agent — with room for more under
 `workflows/`.
 
-- **Runtime:** Flue `0.11.1`, TypeScript, Node 22.18.0 or newer, pnpm.
+- **Runtime:** Flue `0.11.1`, TypeScript, Node `>=22.18.0`, pnpm.
 - **Layout:** root layout (agents in `./workflows`, not `./.agents`).
 
 ## Project map
