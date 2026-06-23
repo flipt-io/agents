@@ -7,7 +7,8 @@ the [GitHub Models](https://docs.github.com/en/github-models) default
 (`github/openai/gpt-4.1`, no API key required), CI patterns, and reusable
 skills / prompts / personas.
 
-The current agents are **PR Review** and **Issue Health Check**.
+The current agents are **PR Review** and **Issue Health Check**. Local builds and
+runs require Node 22.18.0 or newer (the Flue 0.11.1 runtime floor) and pnpm.
 
 ## Agents
 
