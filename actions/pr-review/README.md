@@ -43,6 +43,7 @@ Anthropic.
 | `model`         | no       | `github/openai/gpt-4.1` | Override the review model. |
 | `repo`          | no       | current repo            | `owner/name` of the PR. |
 | `override-mode` | no       | `merge`                 | `merge` or `replace` — how local overrides combine with defaults. |
+| `local-config-dir` | no    | `.agents`               | Path in the target repo to `.agents`-compatible local overrides. Use workflow-specific directories like `.agents/pr-review` to keep multiple agents isolated. |
 | `github-token`  | no       | `github.token`          | Token for `gh` and GitHub Models (needs `pull-requests: write`, and `models: read` for `github/*`). |
 
 Provider credentials (`ANTHROPIC_API_KEY`, `CLOUDFLARE_API_KEY`,
@@ -52,10 +53,9 @@ See [Models](#models) for the full list per provider.
 
 ## Per-repo overrides (`.agents/`)
 
-A consuming repo can tailor reviews by adding an `.agents/` directory at its root,
-so the same directory can hold overrides for every fleet agent that reviews the
-repo, not just this one. Anything present is layered on top of (or replaces) the
-central defaults according to `override-mode`:
+A consuming repo can tailor reviews by adding an `.agents/` directory at its root.
+Anything present is layered on top of (or replaces) the central defaults according
+to `override-mode`:
 
 ```
 .agents/
@@ -77,8 +77,20 @@ central defaults according to `override-mode`:
 
 Subdirectories the reviewer doesn't recognize (e.g. a repo's `.agents/commands/`)
 are simply ignored, and `README.md` files in `prompts/` and `personas/` are
-skipped. If a repo ships no `.agents/` directory, it just gets the central
-defaults.
+skipped. If a repo ships no `.agents/` directory, it just gets the central defaults.
+
+When multiple fleet agents run in the same repo, keep their overrides isolated by
+putting them in workflow-specific directories and setting `local-config-dir`:
+
+```yaml
+- uses: <owner>/agents/actions/pr-review@main
+  with:
+    pr-number: ${{ github.event.pull_request.number }}
+    local-config-dir: .agents/pr-review
+```
+
+The directory still uses the same shape (`prompts/`, `skills/`, `personas/`) as
+`.agents/`.
 
 ## How it works
 
@@ -86,9 +98,10 @@ The action runs in the consuming repo's CI. `github.action_path` is the
 checked-out agents repo, so the agent's code, skills, and prompts come along for
 free at the pinned ref. The action installs deps, then runs
 `flue run pr-review`, passing the PR coordinates plus the paths to the central
-config (`REVIEW_AGENT_DIR`) and the consumer's checkout (`REVIEW_TARGET_DIR`).
-The `code-review` skill resolves the layered guidance, fetches the diff with
-`gh`, reviews, and posts the result.
+config (`REVIEW_AGENT_DIR`), the consumer's checkout (`REVIEW_TARGET_DIR`), and
+the selected local override directory (`REVIEW_LOCAL_CONFIG_DIR`, defaulting to
+`.agents`). The `code-review` skill resolves the layered guidance, fetches the
+diff with `gh`, reviews, and posts the result.
 
 ## Models
 

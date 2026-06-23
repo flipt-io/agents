@@ -46,6 +46,7 @@ responds to issue edits/reopens in v1.
 | `repo` | no | current repo | `owner/name` of the issue. |
 | `model` | no | `github/openai/gpt-4.1` | Override the issue-health model. |
 | `override-mode` | no | `merge` | `merge` or `replace` — how local `.agents/` overrides combine with defaults. |
+| `local-config-dir` | no | `.agents` | Path in the target repo to `.agents`-compatible local overrides. Use workflow-specific directories like `.agents/issue-health` to keep multiple agents isolated. |
 | `github-token` | no | `github.token` | Token for `gh` and GitHub Models. Needs `issues: write`; the default GitHub model also needs `models: read`. |
 | `comment-mode` | no | `always` | `always`, `needs-improvement`, or `off`. |
 | `label-mode` | no | `existing-only` | `existing-only` or `off`. `existing-only` filters suggestions against labels already present in the target repo. |
@@ -57,12 +58,25 @@ via `env:` on the `uses:` step or at the job level rather than as action inputs.
 ## Per-repo overrides (`.agents/`)
 
 A consuming repo can tailor the issue-health analysis by adding an `.agents/`
-directory at its root. The action passes that directory to the workflow as
-`ISSUE_HEALTH_TARGET_DIR`, and `override-mode` controls how those files combine
-with central defaults:
+directory at its root. The action passes the selected local override directory
+to the workflow via `ISSUE_HEALTH_TARGET_DIR` plus `ISSUE_HEALTH_LOCAL_CONFIG_DIR`,
+and `override-mode` controls how those files combine with central defaults:
 
 - `merge` (default): central defaults apply first, then local files refine them.
 - `replace`: local files replace central files for the kinds the repo provides.
+
+When multiple fleet agents run in the same repo, keep their overrides isolated by
+putting them in workflow-specific directories and setting `local-config-dir`:
+
+```yaml
+- uses: flipt-io/agents/actions/issue-health@main
+  with:
+    issue-number: ${{ github.event.issue.number }}
+    local-config-dir: .agents/issue-health
+```
+
+The directory still uses the same shape (`prompts/`, `skills/`, `personas/`) as
+`.agents/`.
 
 ## How it works
 
@@ -77,6 +91,7 @@ It sets the `ISSUE_HEALTH_*` environment variables consumed by
 
 - `ISSUE_HEALTH_AGENT_DIR`
 - `ISSUE_HEALTH_TARGET_DIR`
+- `ISSUE_HEALTH_LOCAL_CONFIG_DIR`
 - `ISSUE_HEALTH_OVERRIDE_MODE`
 - `ISSUE_HEALTH_MODEL`
 - `ISSUE_HEALTH_COMMENT_MODE`

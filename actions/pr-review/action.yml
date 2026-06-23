@@ -18,6 +18,10 @@ inputs:
     description: 'How a consuming repo .agents/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
     required: false
     default: 'merge'
+  local-config-dir:
+    description: 'Path in the target repository to .agents-compatible local overrides. Defaults to .agents.'
+    required: false
+    default: '.agents'
   github-token:
     description: 'Token used by gh to read the diff and post the review. Needs pull-requests: write.'
     required: false
@@ -63,6 +67,7 @@ runs:
         # <their repo>/.agents. The workflow layers them per override-mode.
         REVIEW_AGENT_DIR: ${{ steps.agent.outputs.dir }}
         REVIEW_TARGET_DIR: ${{ github.workspace }}
+        REVIEW_LOCAL_CONFIG_DIR: ${{ inputs.local-config-dir }}
         REVIEW_OVERRIDE_MODE: ${{ inputs.override-mode }}
         REVIEW_MODEL: ${{ inputs.model }}
       run: |

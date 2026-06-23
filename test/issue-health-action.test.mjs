@@ -12,6 +12,7 @@ test('issue-health action declares the expected inputs and config env vars', () 
     'repo',
     'model',
     'override-mode',
+    'local-config-dir',
     'github-token',
     'comment-mode',
     'label-mode',
@@ -22,6 +23,7 @@ test('issue-health action declares the expected inputs and config env vars', () 
   for (const envName of [
     'ISSUE_HEALTH_AGENT_DIR',
     'ISSUE_HEALTH_TARGET_DIR',
+    'ISSUE_HEALTH_LOCAL_CONFIG_DIR',
     'ISSUE_HEALTH_OVERRIDE_MODE',
     'ISSUE_HEALTH_MODEL',
     'ISSUE_HEALTH_COMMENT_MODE',
