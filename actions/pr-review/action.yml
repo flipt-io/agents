@@ -37,9 +37,15 @@ runs:
       shell: bash
       run: echo "dir=$(cd '${{ github.action_path }}/../..' && pwd)" >> "$GITHUB_OUTPUT"
 
-    - uses: pnpm/action-setup@v4
-      with:
-        version: 11
+    # Install pnpm for the agent toolchain without resolving a version from
+    # the *consuming* repo. pnpm/action-setup reads the caller's package.json
+    # and hard-fails ("Multiple versions of pnpm specified") when the consumer
+    # pins packageManager, since this action also passes an explicit version.
+    # npm i -g sidesteps that resolution entirely; the version here only
+    # affects this action's own install, never the consumer's project.
+    - name: Install pnpm (agent toolchain)
+      shell: bash
+      run: npm install -g pnpm@11
 
     - uses: actions/setup-node@v4
       with:
