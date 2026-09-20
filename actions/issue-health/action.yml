@@ -11,9 +11,8 @@ inputs:
     required: false
     default: ${{ github.repository }}
   model:
-    description: 'Override the issue-health model (e.g. github/openai/gpt-4o, anthropic/claude-sonnet-4-6, or cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6). Defaults to the agent default.'
-    required: false
-    default: ''
+    description: 'Provider-qualified issue-health model, e.g. cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6 or anthropic/claude-sonnet-4-6. Required — there is no default model. Pass the provider credentials via env: on the calling step.'
+    required: true
   override-mode:
     description: 'How a consuming repo .agents/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
     required: false
@@ -23,7 +22,7 @@ inputs:
     required: false
     default: '.agents'
   github-token:
-    description: 'Token used by gh to read/comment on the issue, apply existing labels, and authenticate GitHub Models. Needs issues: write and models: read for the default github/* model.'
+    description: 'Token used by gh to read/comment on the issue and apply existing labels. Needs issues: write.'
     required: false
     default: ${{ github.token }}
   comment-mode:
@@ -48,10 +47,12 @@ runs:
     - name: Validate issue-health inputs
       shell: bash
       env:
+        INPUT_MODEL: ${{ inputs.model }}
         INPUT_OVERRIDE_MODE: ${{ inputs.override-mode }}
         INPUT_COMMENT_MODE: ${{ inputs.comment-mode }}
         INPUT_LABEL_MODE: ${{ inputs.label-mode }}
       run: |
+        case "$INPUT_MODEL" in */*) ;; *) echo 'model is required and must be provider-qualified as "<provider>/<model>", e.g. cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6' >&2; exit 1 ;; esac
         case "$INPUT_OVERRIDE_MODE" in merge|replace) ;; *) echo 'override-mode must be merge or replace' >&2; exit 1 ;; esac
         case "$INPUT_COMMENT_MODE" in always|needs-improvement|off) ;; *) echo 'comment-mode must be always, needs-improvement, or off' >&2; exit 1 ;; esac
         case "$INPUT_LABEL_MODE" in existing-only|off) ;; *) echo 'label-mode must be existing-only or off' >&2; exit 1 ;; esac

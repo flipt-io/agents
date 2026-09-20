@@ -1,0 +1,83 @@
+name: Release
+
+# Cuts a release from a semver tag and moves the major alias tag consumers pin
+# to. Both composite actions share one repo-level version — they share `app.ts`,
+# `lib/`, the skills, and the Flue runtime, so they ship together.
+#
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# That validates the tagged tree, force-moves `v1` onto it, and opens a GitHub
+# release. Pre-release tags (v1.0.0-rc.1) don't match the filter — tag and
+# release those by hand if you need them.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the alias tag can be moved and the release notes can
+          # diff against the previous tag.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          # Flue 0.11.1 requires Node >=22.18.0.
+          node-version: '22.18.0'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # A tag is the only gate consumers get — nothing ships unless the tagged
+      # tree type-checks, tests, and builds.
+      - name: Type-check
+        run: npx -p typescript tsc --noEmit -p tsconfig.json
+
+      - name: Test
+        run: node --test test/
+
+      - name: Build
+        run: pnpm build
+
+      # package.json is the single declared version; a mismatch means the tag
+      # was cut without bumping it.
+      - name: Check version matches tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          declared="v$(node -p 'require("./package.json").version')"
+          if [ "$declared" != "$TAG" ]; then
+            echo "package.json version ($declared) does not match tag ($TAG)." >&2
+            echo 'Bump package.json and re-tag.' >&2
+            exit 1
+          fi
+
+      # Consumers pin `@v1`; that alias has to follow the newest 1.x.
+      - name: Move the major alias tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          major="${TAG%%.*}"   # v1.2.3 -> v1
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -f -a "$major" -m "Release $TAG"
+          git push --force origin "refs/tags/$major"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag

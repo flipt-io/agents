@@ -8,6 +8,7 @@ import {
 import { local } from '@flue/runtime/node';
 import path from 'node:path';
 import * as v from 'valibot';
+import { requireModel } from '../lib/model.ts';
 import { postReview, renderReview } from '../lib/review-comments.ts';
 import {
   parseReviewStats,
@@ -47,18 +48,18 @@ const agent = createAgent((ctx) => ({
       GITHUB_TOKEN: ctx.env.GITHUB_TOKEN ?? ctx.env.GH_TOKEN,
     },
   }),
-  // GitHub Models default (registered in app.ts). gpt-4.1 accepts the standard
-  // chat-completions params and, on a paid plan, lifts the free 8k-token cap to
-  // production limits — enough for real reviews. (The gpt-5 family is a
-  // reasoning model that needs max_completion_tokens via the responses API, so
-  // it isn't the default here.) Override per run with REVIEW_MODEL.
-  model: 'github/openai/gpt-4.1',
+  // No default model: REVIEW_MODEL must name a provider-qualified model (e.g.
+  // cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6), and that provider's
+  // credentials must be in the environment. In CI the composite action's
+  // `model` input sets it. Set here rather than per call so delegated personas
+  // run on the same model.
+  model: requireModel(ctx.env.REVIEW_MODEL, 'REVIEW_MODEL'),
   // Reasoning effort. Flue defaults to "medium"; reasoning models (Kimi K2.6,
   // the gpt-5 family) map this to their reasoning budget. A PR review is a
   // bounded, well-specified task — the skill spells out exactly what to do — so
   // "low" keeps the model decisive instead of spending minutes deliberating,
   // which is where the runtime and token cost balloon. Non-reasoning models
-  // (the gpt-4.1 default) ignore it. Bump back up if review quality regresses.
+  // ignore it. Bump back up if review quality regresses.
   thinkingLevel: 'low',
   // Global skills — applied to every PR.
   skills: [codeReview],
@@ -94,8 +95,6 @@ function resolveConfig(env: Record<string, string | undefined>) {
     localConfigDir: resolveLocalConfigDir(env.REVIEW_TARGET_DIR, env.REVIEW_LOCAL_CONFIG_DIR),
     // How local overrides combine with central defaults.
     overrideMode: env.REVIEW_OVERRIDE_MODE === 'replace' ? 'replace' : 'merge',
-    // Optional per-run model override (empty string -> use agent default).
-    model: env.REVIEW_MODEL || undefined,
   };
 }
 
@@ -163,7 +162,6 @@ export async function run({ init, payload, env }: FlueContext) {
 
     try {
       ({ data } = await session.skill('code-review', {
-        model: cfg.model,
         signal: reviewSignal,
         args: {
           prNumber,

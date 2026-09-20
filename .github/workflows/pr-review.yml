@@ -1,7 +1,7 @@
 name: PR Review
 
 # Dogfoods the composite action on this repo's own PRs. Other repos consume the
-# same action via `uses: <owner>/agents/actions/pr-review@main` — see
+# same action via `uses: <owner>/agents/actions/pr-review@v1` — see
 # actions/pr-review/README.md and examples/consumer-workflow.yml.
 on:
   pull_request:
@@ -10,7 +10,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read # default model is github/openai/gpt-4.1 via GitHub Models
 
 jobs:
   review:
@@ -19,5 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./actions/pr-review
+        # There is no default provider: the model is required and its
+        # credentials come from the environment.
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           pr-number: ${{ github.event.pull_request.number }}
+          model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
