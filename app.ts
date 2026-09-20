@@ -1,40 +1,17 @@
-import { registerProvider } from '@flue/runtime';
 import { flue } from '@flue/runtime/routing';
 
-// GitHub Models (https://docs.github.com/en/github-models) exposes an
-// OpenAI-chat-completions-compatible endpoint. Registering it as a Flue
-// provider lets the agent use model ids like `github/openai/gpt-5`,
-// authenticated with a GitHub token that has `models: read` — a PAT, or the
-// Actions GITHUB_TOKEN with that permission.
+// Runtime app entry.
 //
-// This is the default provider (see workflows/pr-review.ts). Registration is a
-// no-op without a token, so a `flue run` with REVIEW_MODEL=anthropic/... and an
-// ANTHROPIC_API_KEY still works.
-const githubModelsToken =
-  process.env.GITHUB_MODELS_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+// No model provider is registered here and no provider is built in as a
+// default: every agent in this repo requires the implementer to pick a
+// provider-qualified model (see lib/model.ts) and supply that provider's
+// credentials through the environment. Flue resolves the common providers —
+// `cloudflare-workers-ai/*`, `anthropic/*`, `openai/*`, … — through pi-ai's
+// built-in catalog, so nothing needs registering for those.
+//
+// To add a provider pi-ai doesn't know about, import `registerProvider` from
+// '@flue/runtime' and register it here, before the export below; the
+// registration runs as a module side effect, ahead of Flue serving the agent.
 
-if (githubModelsToken) {
-  registerProvider('github', {
-    // pi-ai's OpenAI chat-completions wire protocol; GitHub Models speaks it.
-    api: 'openai-completions',
-    // pi-ai appends `/chat/completions` to this base.
-    baseUrl: 'https://models.github.ai/inference',
-    apiKey: githubModelsToken,
-    // Default sizing is free-tier-safe: on a free account GitHub caps requests
-    // at ~8k input / 4k output. Per-model overrides below assume a PAID plan,
-    // where those caps lift to production limits.
-    contextWindow: 8000,
-    maxTokens: 4000,
-    models: {
-      // Default model — paid plan lifts the 8k cap; sized generously for diffs.
-      'openai/gpt-4.1': { contextWindow: 128000, maxTokens: 16384 },
-      // Reasoning models (need the responses API / max_completion_tokens).
-      'openai/gpt-5-mini': { contextWindow: 200000, maxTokens: 16384 },
-      'openai/gpt-5': { contextWindow: 200000, maxTokens: 16384 },
-    },
-  });
-}
-
-// Flue's built-in app (a Hono instance). The provider registration above runs
-// first as a module side effect, then Flue serves the agent normally.
+// Flue's built-in app (a Hono instance).
 export default flue();

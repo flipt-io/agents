@@ -11,9 +11,8 @@ inputs:
     required: false
     default: ${{ github.repository }}
   model:
-    description: 'Override the review model (e.g. anthropic/claude-opus-4-7, github/openai/gpt-4o, or cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6). Defaults to the agent default.'
-    required: false
-    default: ''
+    description: 'Provider-qualified review model, e.g. cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6 or anthropic/claude-sonnet-4-6. Required — there is no default model. Pass the provider credentials via env: on the calling step.'
+    required: true
   override-mode:
     description: 'How a consuming repo .agents/ directory combines with the central defaults: "merge" (defaults + local) or "replace" (local only).'
     required: false
@@ -36,6 +35,16 @@ runs:
       id: agent
       shell: bash
       run: echo "dir=$(cd '${{ github.action_path }}/../..' && pwd)" >> "$GITHUB_OUTPUT"
+
+    - name: Validate pr-review inputs
+      shell: bash
+      env:
+        INPUT_MODEL: ${{ inputs.model }}
+      run: |
+        case "$INPUT_MODEL" in
+          */*) ;;
+          *) echo 'model is required and must be provider-qualified as "<provider>/<model>", e.g. cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6' >&2; exit 1 ;;
+        esac
 
     - uses: pnpm/action-setup@v4
       with:

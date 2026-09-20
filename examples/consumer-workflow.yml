@@ -1,11 +1,11 @@
 # Copy this into a consuming repo as `.github/workflows/pr-review.yml`.
 # Replace <owner> with the org/user that hosts the agents repo.
 #
-# Default model is github/openai/gpt-4.1 via GitHub Models — the built-in
-# GITHUB_TOKEN authenticates it, so no API key is needed, but the token needs
-# `models: read` (below). On a free plan it's capped at ~8k tokens/request
-# (too small for big diffs); a paid plan lifts that. To use Anthropic instead,
-# see the block at the bottom.
+# There is no default model or default provider: `model` is required, and the
+# provider's credentials go through `env:` on the calling step (not action
+# inputs) — pi-ai reads them from the inherited process environment. The example
+# below runs Kimi K2.6 on Cloudflare Workers AI; an Anthropic variant is at the
+# bottom.
 name: PR Review
 
 on:
@@ -15,7 +15,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read
 
 jobs:
   review:
@@ -24,38 +23,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # so the agent can see this repo's .agents/ overrides
 
-      - uses: <owner>/agents/actions/pr-review@main # @main = always-latest skills/prompts; pin @v1 for reproducible
+      # --- Kimi K2.6 on Cloudflare Workers AI --------------------------------
+      # 262k context window, reasoning, vision, tool calling.
+      # Add CLOUDFLARE_API_KEY (a token with `Workers AI` → Read scope) and
+      # CLOUDFLARE_ACCOUNT_ID as repo secrets.
+      # @v1 tracks the latest 1.x (no breaking input changes); @v1.0.0 freezes
+      # the code and the review prompts; @main is the unreleased tip.
+      - uses: <owner>/agents/actions/pr-review@v1
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           pr-number: ${{ github.event.pull_request.number }}
+          model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
           # Optional:
-          # model: github/openai/gpt-4o    # another GitHub model
           # override-mode: merge           # or: replace
           # local-config-dir: .agents/pr-review # isolate this agent's prompts from other agents
 
-      # --- Or review with Anthropic instead of GitHub Models -----------------
-      # Drop `models: read` above, add ANTHROPIC_API_KEY as a repo secret, and
-      # use this step instead. Provider credentials go through env:, not action
-      # inputs — pi-ai reads them from the inherited process environment.
+      # --- Or review with Anthropic ------------------------------------------
+      # Add ANTHROPIC_API_KEY as a repo secret and use this step instead.
       #
-      # - uses: <owner>/agents/actions/pr-review@main
+      # - uses: <owner>/agents/actions/pr-review@v1
       #   env:
       #     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       #   with:
       #     pr-number: ${{ github.event.pull_request.number }}
       #     model:     anthropic/claude-sonnet-4-6
-
-      # --- Or review with Kimi K2.6 on Cloudflare Workers AI -----------------
-      # 262k context window, reasoning, vision, tool calling.
-      # Drop `models: read` above, add CLOUDFLARE_API_KEY (token with
-      # `Workers AI` → Read scope) and CLOUDFLARE_ACCOUNT_ID as repo secrets,
-      # then use this step instead. Provider credentials go through env:, not
-      # action inputs — pi-ai's cloudflare-workers-ai provider reads them from
-      # the inherited process environment.
-      #
-      # - uses: <owner>/agents/actions/pr-review@main
-      #   env:
-      #     CLOUDFLARE_API_KEY:    ${{ secrets.CLOUDFLARE_API_KEY }}
-      #     CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      #   with:
-      #     pr-number: ${{ github.event.pull_request.number }}
-      #     model:     cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6

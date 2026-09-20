@@ -21,17 +21,29 @@ on:
 permissions:
   contents: read
   issues: write
-  models: read            # default model is github/openai/gpt-4.1
 
 jobs:
   issue-health:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4 # lets the agent read this repo's .agents/ overrides
-      - uses: flipt-io/agents/actions/issue-health@main
+      - uses: flipt-io/agents/actions/issue-health@v1
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           issue-number: ${{ github.event.issue.number }}
+          model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
 ```
+
+`model` is **required** — there is no default model or default provider, and the
+provider's credentials come from the step's `env:`. See [Models](#models).
+
+`@v1` tracks the latest 1.x — fixes and improved guidance arrive, inputs and
+required credentials don't change under you. Use `@v1.0.0` to freeze the code
+*and* the prompts, or `@main` for the unreleased tip. Both actions in this repo
+share one version; see [Versioning](../../README.md#versioning) and
+[`CHANGELOG.md`](../../CHANGELOG.md).
 
 The defaults post one combined health-check/support comment and apply matching
 labels only when those labels already exist in the target repository. The action
@@ -44,10 +56,10 @@ responds to issue edits/reopens in v1.
 | --- | --- | --- | --- |
 | `issue-number` | yes | — | Issue number to analyze. |
 | `repo` | no | current repo | `owner/name` of the issue. |
-| `model` | no | `github/openai/gpt-4.1` | Override the issue-health model. |
+| `model` | yes | — | Provider-qualified issue-health model, e.g. `cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6`. |
 | `override-mode` | no | `merge` | `merge` or `replace` — how local `.agents/` overrides combine with defaults. |
 | `local-config-dir` | no | `.agents` | Path in the target repo to `.agents`-compatible local overrides. Use workflow-specific directories like `.agents/issue-health` to keep multiple agents isolated. |
-| `github-token` | no | `github.token` | Token for `gh` and GitHub Models. Needs `issues: write`; the default GitHub model also needs `models: read`. |
+| `github-token` | no | `github.token` | Token for `gh`. Needs `issues: write`. |
 | `comment-mode` | no | `always` | `always`, `needs-improvement`, or `off`. |
 | `label-mode` | no | `existing-only` | `existing-only` or `off`. `existing-only` filters suggestions against labels already present in the target repo. |
 
@@ -69,9 +81,10 @@ When multiple fleet agents run in the same repo, keep their overrides isolated b
 putting them in workflow-specific directories and setting `local-config-dir`:
 
 ```yaml
-- uses: flipt-io/agents/actions/issue-health@main
+- uses: flipt-io/agents/actions/issue-health@v1
   with:
     issue-number: ${{ github.event.issue.number }}
+    model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
     local-config-dir: .agents/issue-health
 ```
 
@@ -103,17 +116,33 @@ post comments or apply labels on its own.
 
 ## Models
 
-The default model is `github/openai/gpt-4.1` via GitHub Models, authenticated by
-the built-in token when `models: read` is granted.
-
-To use Anthropic or Cloudflare Workers AI, pass provider credentials with `env:`
-and set `model`; drop `models: read` if you are not using a `github/*` model.
+There is no default model and no default provider: `model` is required, and the
+action fails fast if it isn't provider-qualified as `<provider>/<model>`. Pass
+the provider's credentials with `env:` on the calling step — they are read from
+the process environment, not from action inputs.
 
 ```yaml
-- uses: flipt-io/agents/actions/issue-health@main
+# Kimi K2.6 on Cloudflare Workers AI
+- uses: flipt-io/agents/actions/issue-health@v1
+  env:
+    CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+    CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  with:
+    issue-number: ${{ github.event.issue.number }}
+    model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
+```
+
+```yaml
+# Anthropic
+- uses: flipt-io/agents/actions/issue-health@v1
   env:
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
   with:
     issue-number: ${{ github.event.issue.number }}
     model: anthropic/claude-sonnet-4-6
 ```
+
+Flue resolves both providers through pi-ai's built-in catalog; nothing needs
+registering in the agents repo's `app.ts` unless you add a provider pi-ai
+doesn't know. Locally, set `ISSUE_HEALTH_MODEL` plus that provider's
+credentials in `.env`.
