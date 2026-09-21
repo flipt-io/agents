@@ -57,9 +57,15 @@ runs:
         case "$INPUT_COMMENT_MODE" in always|needs-improvement|off) ;; *) echo 'comment-mode must be always, needs-improvement, or off' >&2; exit 1 ;; esac
         case "$INPUT_LABEL_MODE" in existing-only|off) ;; *) echo 'label-mode must be existing-only or off' >&2; exit 1 ;; esac
 
-    - uses: pnpm/action-setup@v4
-      with:
-        version: 11
+    # Install pnpm for the agent toolchain without resolving a version from
+    # the *consuming* repo. pnpm/action-setup reads the caller's package.json
+    # and hard-fails ("Multiple versions of pnpm specified") when the consumer
+    # pins packageManager, since this action also passes an explicit version.
+    # npm i -g sidesteps that resolution entirely; the version here only
+    # affects this action's own install, never the consumer's project.
+    - name: Install pnpm (agent toolchain)
+      shell: bash
+      run: npm install -g pnpm@11
 
     - uses: actions/setup-node@v4
       with:
