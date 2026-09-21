@@ -16,35 +16,46 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read            # default model is github/openai/gpt-4.1
 jobs:
   review:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: <owner>/agents/actions/pr-review@main
+      - uses: <owner>/agents/actions/pr-review@v1
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           pr-number: ${{ github.event.pull_request.number }}
+          model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
 ```
 
-That's it — open a PR and the agent reviews it. The default model
-(`github/openai/gpt-4.1`) runs on GitHub Models authenticated by the built-in
-`GITHUB_TOKEN` (no API key). See [Models](#models) for free vs. paid limits and
-Anthropic.
+That's it — open a PR and the agent reviews it. `model` is **required**: the
+agent has no default model or default provider, and the provider's credentials
+come from the step's `env:`. See [Models](#models) for the supported
+providers.
 
-- `@main` → always uses the latest central skills/prompts.
-- `@v1` (a tag) → pins to a released version for reproducible reviews.
+Pin the ref deliberately:
+
+- `@v1` → latest 1.x: fixes and improved review guidance arrive automatically,
+  inputs and required credentials don't change under you. **Recommended.**
+- `@v1.0.0` → that exact tree, skills and prompts included. Reproducible.
+- `@main` → unreleased tip; may break without notice.
+
+Both actions in this repo share one version — see
+[Versioning](../../README.md#versioning) and
+[`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## Inputs
 
 | Input           | Required | Default                 | Description |
 | --------------- | -------- | ----------------------- | ----------- |
 | `pr-number`     | yes      | —                       | PR number to review. |
-| `model`         | no       | `github/openai/gpt-4.1` | Override the review model. |
+| `model`         | yes      | —                       | Provider-qualified review model, e.g. `cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6`. |
 | `repo`          | no       | current repo            | `owner/name` of the PR. |
 | `override-mode` | no       | `merge`                 | `merge` or `replace` — how local overrides combine with defaults. |
 | `local-config-dir` | no    | `.agents`               | Path in the target repo to `.agents`-compatible local overrides. Use workflow-specific directories like `.agents/pr-review` to keep multiple agents isolated. |
-| `github-token`  | no       | `github.token`          | Token for `gh` and GitHub Models (needs `pull-requests: write`, and `models: read` for `github/*`). |
+| `github-token`  | no       | `github.token`          | Token for `gh` (needs `pull-requests: write`). |
 
 Provider credentials (`ANTHROPIC_API_KEY`, `CLOUDFLARE_API_KEY`,
 `CLOUDFLARE_ACCOUNT_ID`, …) are read from the workflow environment — pass them
@@ -83,9 +94,10 @@ When multiple fleet agents run in the same repo, keep their overrides isolated b
 putting them in workflow-specific directories and setting `local-config-dir`:
 
 ```yaml
-- uses: <owner>/agents/actions/pr-review@main
+- uses: <owner>/agents/actions/pr-review@v1
   with:
     pr-number: ${{ github.event.pull_request.number }}
+    model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
     local-config-dir: .agents/pr-review
 ```
 
@@ -105,38 +117,18 @@ diff with `gh`, reviews, and posts the result.
 
 ## Models
 
-The agent runs on [GitHub Models](https://docs.github.com/en/github-models) by
-default — `app.ts` registers it as a Flue provider (`github/*`,
-OpenAI-chat-completions compatible). Three ways to run:
+The action ships **no default model and no default provider** — `model` is a
+required input, and the action fails fast if it isn't provider-qualified as
+`<provider>/<model>`. Provider credentials are read from the process
+environment, so pass them via `env:` on the calling step (or at job level), not
+as action inputs.
 
-- **Default — `github/openai/gpt-4.1`.** Add `models: read` to `permissions`;
-  the built-in `GITHUB_TOKEN` authenticates it (no API key). On a **free** plan
-  GitHub caps requests at ~8k input tokens — too small for most real reviews
-  (system prompt + skill + diff overflow it). A **paid** plan lifts that to
-  production limits, which is what makes normal PRs fit. `github/openai/gpt-4o`
-  works the same way.
-- **gpt-5 family.** `github/openai/gpt-5` / `gpt-5-mini` are reasoning models
-  that require the responses API / `max_completion_tokens`, which the locally
-  registered GitHub Models provider doesn't wire up — they'll 400 through the
-  chat-completions path. Not supported via `github/*` as-is.
-- **Anthropic.** Set `model: anthropic/claude-sonnet-4-6` and expose
-  `ANTHROPIC_API_KEY` via `env:` on the calling step:
-  ```yaml
-  - uses: <owner>/agents/actions/pr-review@main
-    env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-    with:
-      pr-number: ${{ github.event.pull_request.number }}
-      model:     anthropic/claude-sonnet-4-6
-  ```
-  Drop `models: read`.
 - **Cloudflare Workers AI.** Set
   `model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6` (262k context,
   reasoning, vision, tool calls) and expose `CLOUDFLARE_API_KEY` (a token
-  with `Workers AI` → Read scope) + `CLOUDFLARE_ACCOUNT_ID` via `env:` on
-  the calling step:
+  with `Workers AI` → Read scope) + `CLOUDFLARE_ACCOUNT_ID`:
   ```yaml
-  - uses: <owner>/agents/actions/pr-review@main
+  - uses: <owner>/agents/actions/pr-review@v1
     env:
       CLOUDFLARE_API_KEY:    ${{ secrets.CLOUDFLARE_API_KEY }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -148,17 +140,27 @@ OpenAI-chat-completions compatible). Three ways to run:
   pi-ai's built-in `cloudflare-workers-ai` catalog. Reasoning works because
   the catalog flags the model as reasoning-capable and the
   `openai-completions` adapter maps `maxTokens` → `max_completion_tokens`
-  accordingly. Drop `models: read`.
+  accordingly.
+- **Anthropic.** Set `model: anthropic/claude-sonnet-4-6` and expose
+  `ANTHROPIC_API_KEY`:
+  ```yaml
+  - uses: <owner>/agents/actions/pr-review@v1
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+      model:     anthropic/claude-sonnet-4-6
+  ```
+- **Another provider.** Anything in pi-ai's catalog works by id. For a provider
+  it doesn't know, register it with `registerProvider(...)` in the agents repo's
+  `app.ts`.
 
-Locally, set `GITHUB_MODELS_TOKEN` (a PAT with `models: read`) or
-`REVIEW_MODEL` + `ANTHROPIC_API_KEY`.
+Locally, set `REVIEW_MODEL` plus that provider's credentials in `.env`.
 
-> **Heads up on the free tier.** GitHub Models does **not** host Claude, and the
-> *free* tier is rate-limited (~8000 input / 4000 output tokens per request,
-> ~10–15 requests/min, ~50–150 requests/day). A review of a non-trivial PR makes
-> several model calls and a large diff can exceed the per-request token cap, so
-> big or busy repos will hit limits. Enable **paid** GitHub Models (lifts the cap
-> for gpt-4.1/gpt-4o) or use Anthropic for real throughput.
+> **Pick a model with room for the diff.** A review of a non-trivial PR makes
+> several model calls, and the system prompt + skill + diff have to fit in one
+> request. Small context windows (or a provider's free-tier per-request token
+> cap) will truncate or fail on real PRs.
 
 ## Alternative: reusable workflow
 
@@ -169,6 +171,6 @@ consumers then use:
 ```yaml
 jobs:
   review:
-    uses: <owner>/agents/.github/workflows/pr-review.yml@main
+    uses: <owner>/agents/.github/workflows/pr-review.yml@v1
     secrets: inherit
 ```

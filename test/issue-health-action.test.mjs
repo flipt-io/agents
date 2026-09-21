@@ -42,11 +42,25 @@ test('issue-health action validates documented enum inputs', () => {
 test('issue-health docs and example use issues.opened with minimal required permissions', () => {
   for (const body of [readme, example]) {
     assert.match(body, /issues:\n\s+types: \[opened\]/);
-    assert.match(body, /permissions:\n\s+contents: read\n\s+issues: write\n\s+models: read/);
+    assert.match(body, /permissions:\n\s+contents: read\n\s+issues: write/);
     assert.match(body, /issue-number: \$\{\{ github\.event\.issue\.number \}\}/);
   }
 
   assert.doesNotMatch(example, /pull-requests: write/);
+});
+
+test('issue-health docs and example require an explicit provider-qualified model', () => {
+  // GitHub Models is gone: nothing may imply a default model or `models: read`.
+  for (const body of [action, readme, example]) {
+    assert.doesNotMatch(body, /models: read/);
+    assert.doesNotMatch(body, /github\/openai/);
+  }
+
+  assert.match(action, /^  model:\n\s+description:[^\n]*\n\s+required: true$/m);
+
+  for (const body of [readme, example]) {
+    assert.match(body, /model: cloudflare-workers-ai\/@cf\/moonshotai\/kimi-k2\.6/);
+  }
 });
 
 test('issue-health docs state labels are existing-only and never created', () => {

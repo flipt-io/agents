@@ -2,9 +2,8 @@
 
 A collection of [Flue](https://flueframework.com) agents for the Flipt
 organization. It's one pnpm-workspace monorepo: each agent is a workflow in
-`workflows/`, and they share common infrastructure — model providers (`app.ts`),
-the [GitHub Models](https://docs.github.com/en/github-models) default
-(`github/openai/gpt-4.1`, no API key required), CI patterns, and reusable
+`workflows/`, and they share common infrastructure — the runtime entry
+(`app.ts`), model selection (`lib/model.ts`), CI patterns, and reusable
 skills / prompts / personas.
 
 The current agents are **PR Review** and **Issue Health Check**. Local builds and
@@ -41,7 +40,7 @@ agents/                       # pnpm workspace root — a fleet of agents
     consumer-workflow.yml     # copy-paste workflows for consuming repos
     issue-health-workflow.yml
     sample-consumer/.agents/  # example per-repo overrides
-  app.ts                      # runtime entry: registers model providers (incl. GitHub Models)
+  app.ts                      # runtime entry (register extra model providers here)
   flue.config.ts              # default target (node)
   .github/workflows/
     pr-review.yml             # dogfoods the action on this repo's PRs
@@ -88,31 +87,61 @@ array.
 
 ## Models
 
-Default: **`github/openai/gpt-4.1`** via [GitHub Models](https://docs.github.com/en/github-models)
-(registered in `app.ts`), authenticated by a GitHub token with `models: read` —
-no Anthropic key. On a **free** plan GitHub caps requests at ~8k tokens (too
-small for big diffs); a **paid** plan lifts that to production limits, which is
-what makes real reviews fit.
+**There is no default model and no default provider.** Whoever runs an agent
+picks a provider-qualified model and supplies that provider's credentials. A
+missing or malformed model fails at startup (`lib/model.ts`), not mid-review.
 
-Override per run with `REVIEW_MODEL` or `ISSUE_HEALTH_MODEL` (locally), or the
-action's `model` input (CI):
+Set it with `REVIEW_MODEL` / `ISSUE_HEALTH_MODEL` (locally, via `.env`) or the
+action's required `model` input (CI). Credentials always travel through the
+environment, never through action inputs:
 
-- another GitHub model (e.g. `github/openai/gpt-4o`),
-- `anthropic/claude-sonnet-4-6` (also set `ANTHROPIC_API_KEY`),
-- `cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6` for Kimi K2.6 on Cloudflare
-  Workers AI — 262k context, reasoning, vision, tool calling, at $0.95/$4.00
+- `cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6` — Kimi K2.6 on Cloudflare
+  Workers AI: 262k context, reasoning, vision, tool calling, at $0.95/$4.00
   per M input/output tokens. Set `CLOUDFLARE_API_KEY` (a token with
-  `Workers AI` → Read) and `CLOUDFLARE_ACCOUNT_ID`. No `app.ts` change is
-  needed: Flue resolves it through pi-ai's built-in `cloudflare-workers-ai`
-  catalog, which already flags the model as reasoning-capable.
+  `Workers AI` → Read) and `CLOUDFLARE_ACCOUNT_ID`.
+- `anthropic/claude-sonnet-4-6` — set `ANTHROPIC_API_KEY`.
 
-The `github/openai/gpt-5*` family is a reasoning model that needs the responses
-API / `max_completion_tokens` on the locally registered GitHub Models provider,
-which isn't wired up yet — it'll 400 through chat-completions. Reasoning models
-via `cloudflare-workers-ai/*` work today because the openai-completions adapter
-sends `max_completion_tokens` automatically when pi-ai's catalog marks the
-model as reasoning-capable. See
+Neither needs an `app.ts` change: Flue resolves both through pi-ai's built-in
+catalog. Reasoning models work over `cloudflare-workers-ai/*` because the
+`openai-completions` adapter sends `max_completion_tokens` automatically when
+the catalog marks a model as reasoning-capable. To use a provider pi-ai doesn't
+know, register it in `app.ts`. See
 [`actions/pr-review/README.md`](actions/pr-review/README.md#models).
+
+## Versioning
+
+Both actions share one repo-level version — they also share `app.ts`, `lib/`,
+the skills, and the Flue runtime, so they ship together. Releases are semver
+tags (`v1.0.0`), and `package.json` holds the declared version. Changes are
+logged in [`CHANGELOG.md`](CHANGELOG.md).
+
+Pick a ref per what you want:
+
+| Ref | What you get |
+| --- | --- |
+| `@v1` | Latest 1.x. Fixes and improved review guidance arrive automatically; no breaking input or credential changes. **Recommended.** |
+| `@v1.0.0` | That exact tree, frozen. Fully reproducible. |
+| `@main` | Unreleased tip. May break without notice. |
+
+Because the action carries its skills and prompts along at the pinned ref,
+pinning an exact tag freezes the *review guidance* too, not just the code — a
+repo on `@v1.0.0` keeps reviewing against that release's prompts until it moves.
+`@v1` is the middle ground: stable inputs, current guidance.
+
+The public surface semver covers is the actions' inputs and the environment
+they expect — including which providers and credentials a consumer must supply.
+Requiring the `model` input is a breaking change for exactly that reason.
+
+### Cutting a release
+
+1. Bump `version` in `package.json` and move the heading in `CHANGELOG.md`.
+2. Merge that to `main`.
+3. `git tag v1.2.0 && git push origin v1.2.0`.
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) then
+type-checks, tests, and builds the tagged tree, verifies the tag matches
+`package.json`, force-moves the `v1` alias onto it, and publishes the GitHub
+release. Nothing ships if validation fails.
 
 ## The PR Review agent
 
@@ -133,22 +162,25 @@ the review logic, skills, and prompts stay centralized here. See
 permissions:
   contents: read
   pull-requests: write   # required: the workflow posts the review
-  models: read           # GitHub Models auth (no API key)
 jobs:
   review:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: <owner>/agents/actions/pr-review@main   # @main = always-latest; pin @v1 for reproducible
+      - uses: <owner>/agents/actions/pr-review@v1     # latest 1.x; see Versioning
+        env:                                          # provider credentials
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           pr-number: ${{ github.event.pull_request.number }}
+          model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6   # required
 ```
 
 > **Action visibility:** GitHub only lets a **private** action be consumed by
 > **private** repos in the org. If the consumer is public (or you just want the
 > simplest setup), make `agents` public. For fork PRs on a public repo, the
 > consumer must trigger on `pull_request_target` (so the job gets a writable
-> token + model access) — see [`examples/consumer-workflow.yml`](examples/consumer-workflow.yml).
+> token and access to the provider secrets) — see [`examples/consumer-workflow.yml`](examples/consumer-workflow.yml).
 
 ### Per-repo overrides
 
@@ -161,7 +193,7 @@ agent, not just this one. The `override-mode` input controls whether those
 ### Run it locally
 
 ```bash
-cp .env.example .env        # GITHUB_MODELS_TOKEN (models:read) + GH_TOKEN for gh
+cp .env.example .env        # REVIEW_MODEL + its provider creds, GH_TOKEN for gh
 pnpm install
 pnpm exec flue run pr-review --payload '{"prNumber": 123, "repo": "owner/name"}'
 ```
@@ -191,15 +223,18 @@ on:
 permissions:
   contents: read
   issues: write      # required: the workflow comments and may apply labels
-  models: read       # GitHub Models auth (no API key)
 jobs:
   issue-health:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: <owner>/agents/actions/issue-health@main
+      - uses: <owner>/agents/actions/issue-health@v1
+        env:                                          # provider credentials
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           issue-number: ${{ github.event.issue.number }}
+          model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6   # required
 ```
 
 v1 runs only for newly opened issues. It does not respond to edits or reopens,
@@ -226,7 +261,7 @@ defaults or `replace` them. Full details are in
 ### Run it locally
 
 ```bash
-cp .env.example .env        # GITHUB_MODELS_TOKEN (models:read) + GH_TOKEN for gh
+cp .env.example .env        # ISSUE_HEALTH_MODEL + its provider creds, GH_TOKEN for gh
 pnpm install
 pnpm issue-health -- --payload '{"issueNumber":123,"repo":"owner/name"}'
 ```
@@ -238,9 +273,9 @@ issue from `repo`, posts according to `ISSUE_HEALTH_COMMENT_MODE` (default
 
 ## Adding an agent
 
-Add `workflows/<name>.ts` — it shares everything above: the model providers in
-`app.ts`, the GitHub Models default, and the skills / prompts / personas
-patterns. Give it its own skill(s) under `skills/`, prompt guidance under
+Add `workflows/<name>.ts` — it shares everything above: the runtime entry in
+`app.ts`, required model selection via `requireModel(ctx.env.<NAME>_MODEL, …)`,
+and the skills / prompts / personas patterns. Give it its own skill(s) under `skills/`, prompt guidance under
 `prompts/`, and personas under `personas/` as needed, then register them on the
 agent. Run it with `flue run <name>`, and (if it should be consumable by other
 repos) add an action under `actions/<name>/`.

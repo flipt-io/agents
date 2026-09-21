@@ -2,6 +2,7 @@ import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHand
 import { local } from '@flue/runtime/node';
 import path from 'node:path';
 import * as v from 'valibot';
+import { requireModel } from '../lib/model.ts';
 import {
   ISSUE_HEALTH_ISSUE_TYPES,
   ISSUE_HEALTH_VERDICTS,
@@ -25,7 +26,11 @@ const agent = createAgent((ctx) => ({
   // model-facing shell tools. Deterministic workflow code passes GitHub auth only
   // to harness-level shell calls that are not available to the model.
   sandbox: local(),
-  model: 'github/openai/gpt-4.1',
+  // No default model: ISSUE_HEALTH_MODEL must name a provider-qualified model
+  // (e.g. cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6), and that provider's
+  // credentials must be in the environment. In CI the composite action's
+  // `model` input sets it.
+  model: requireModel(ctx.env.ISSUE_HEALTH_MODEL, 'ISSUE_HEALTH_MODEL'),
   thinkingLevel: 'low',
   instructions:
     'For issue-health skill calls, analyze only the supplied issue context. Do not run shell commands, call GitHub APIs, post comments, or apply labels; workflow code handles all GitHub IO deterministically.',
@@ -71,7 +76,6 @@ type Config = {
   targetDir: string;
   localConfigDir: string;
   overrideMode: 'merge' | 'replace';
-  model?: string;
   commentMode: IssueHealthCommentMode;
   labelMode: IssueHealthLabelMode;
 };
@@ -95,7 +99,6 @@ function resolveConfig(env: Record<string, string | undefined>): Config {
     // The target repo's optional local overrides; defaults to `.agents`.
     localConfigDir: resolveLocalConfigDir(env.ISSUE_HEALTH_TARGET_DIR, env.ISSUE_HEALTH_LOCAL_CONFIG_DIR),
     overrideMode: env.ISSUE_HEALTH_OVERRIDE_MODE === 'replace' ? 'replace' : 'merge',
-    model: env.ISSUE_HEALTH_MODEL || undefined,
     ...issueHealthConfig,
   };
 }
@@ -141,7 +144,6 @@ export async function run({ init, payload, env }: FlueContext) {
   const currentLabels = issue.labels.map((label) => label.name);
 
   const { data } = await session.skill('issue-health', {
-    model: cfg.model,
     args: {
       repo: targetRepo,
       issue: {
