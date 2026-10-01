@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@flue/runtime": "^0.11.1",
-    "valibot": "^1.4.1"
+    "valibot": "^1.5.0"
   },
   "devDependencies": {
     "@flue/cli": "^0.11.1",
-    "@types/node": "^25.9.1"
+    "@types/node": "^25.9.8"
   }
 }
