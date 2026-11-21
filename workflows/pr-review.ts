@@ -1,11 +1,6 @@
-import {
-  connectMcpServer,
-  createAgent,
-  type FlueContext,
-  type McpServerConnection,
-  type WorkflowRouteHandler,
-} from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+import { createMcpConnection, init, useModel, useSandbox, useSkill, useSubagent, useTool, type McpConnection } from '@flue/runtime';
+import { start, local } from '@flue/runtime/node';
+import { githubIo, skillPrompt, useResult, type WorkflowInput } from '../lib/runtime.ts';
 import path from 'node:path';
 import * as v from 'valibot';
 import { requireModel } from '../lib/model.ts';
@@ -24,48 +19,14 @@ import {
 // Skills registered here apply to EVERY pull request this agent reviews — they
 // are part of the agent definition, not the per-PR payload. To add another
 // global skill: drop a `skills/<name>/SKILL.md`, import it below, and add it to
-// the `skills` array. (Global prompts work differently — see below — and need
+// a `useSkill` call. (Global prompts work differently — see below — and need
 // no code change at all.)
 // ---------------------------------------------------------------------------
-import codeReview from '../skills/code-review/SKILL.md' with { type: 'skill' };
+import codeReview from '../skills/code-review/SKILL.md';
 
 // Global subagent personas — see ./personas. Registering them here makes them
 // available for the reviewer to delegate focused deep-dives to, on every PR.
 import { personas } from '../personas/index.ts';
-
-const agent = createAgent((ctx) => ({
-  // `local()` runs against the host filesystem + $PATH (the checked-out repo
-  // plus `gh`, `git`, etc.), and auto-discovers AGENTS.md + skills from the
-  // project root. By default it only forwards shell-essential env vars to the
-  // agent's shell, so expose the GitHub token explicitly — otherwise the `gh`
-  // CLI the reviewer shells out to can't read the diff or post the review.
-  sandbox: local({
-    // The reviewer shells out to `gh` to read the PR diff; expose the token so
-    // it's authenticated. (Posting the review is done deterministically by the
-    // workflow below, not by the model.)
-    env: {
-      GH_TOKEN: ctx.env.GH_TOKEN ?? ctx.env.GITHUB_TOKEN,
-      GITHUB_TOKEN: ctx.env.GITHUB_TOKEN ?? ctx.env.GH_TOKEN,
-    },
-  }),
-  // No default model: REVIEW_MODEL must name a provider-qualified model (e.g.
-  // cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6), and that provider's
-  // credentials must be in the environment. In CI the composite action's
-  // `model` input sets it. Set here rather than per call so delegated personas
-  // run on the same model.
-  model: requireModel(ctx.env.REVIEW_MODEL, 'REVIEW_MODEL'),
-  // Reasoning effort. Flue defaults to "medium"; reasoning models (Kimi K2.6,
-  // the gpt-5 family) map this to their reasoning budget. A PR review is a
-  // bounded, well-specified task — the skill spells out exactly what to do — so
-  // "low" keeps the model decisive instead of spending minutes deliberating,
-  // which is where the runtime and token cost balloon. Non-reasoning models
-  // ignore it. Bump back up if review quality regresses.
-  thinkingLevel: 'low',
-  // Global skills — applied to every PR.
-  skills: [codeReview],
-  // Global personas — focused subagents the review can delegate to.
-  subagents: personas,
-}));
 
 // What the caller sends per invocation: just which PR to review.
 const PayloadSchema = v.object({
@@ -84,7 +45,7 @@ function resolveLocalConfigDir(targetDir: string | undefined, localConfigDir: st
 }
 
 // Resolve where config lives, from env set by the GitHub Action. All have
-// sensible fallbacks so a bare `flue run pr-review` still works locally.
+// sensible fallbacks for local runs.
 function resolveConfig(env: Record<string, string | undefined>) {
   return {
     // Central skills/prompts (this project). '.' for local runs.
@@ -114,7 +75,8 @@ const SkillResult = v.object({
 type SkillResult = v.InferOutput<typeof SkillResult>;
 
 
-export async function run({ init, payload, env }: FlueContext) {
+export async function run({ payload, env }: WorkflowInput) {
+  const model = requireModel(env.REVIEW_MODEL, 'REVIEW_MODEL');
   const { prNumber, repo } = v.parse(PayloadSchema, payload);
   const targetRepo = repo ?? env.GITHUB_REPOSITORY;
   const cfg = resolveConfig(env);
@@ -123,23 +85,37 @@ export async function run({ init, payload, env }: FlueContext) {
   // the docs (tools surface as `mcp__flipt-docs__*`). Best-effort and
   // env-overridable: set REVIEW_DOCS_MCP_URL='' to disable, or to another URL.
   const docsMcpUrl = env.REVIEW_DOCS_MCP_URL ?? 'https://docs.flipt.io/mcp';
-  let docs: McpServerConnection | undefined;
+  let docs: McpConnection | undefined;
   if (docsMcpUrl) {
     try {
-      docs = await connectMcpServer('flipt-docs', { url: docsMcpUrl });
+      docs = await createMcpConnection({ name: 'flipt-docs', url: docsMcpUrl });
     } catch {
       console.error(`Docs MCP unavailable (${docsMcpUrl}); reviewing without it.`);
     }
   }
 
+  function ReviewAgent() {
+    useModel(model, { thinkingLevel: 'low' });
+    useSandbox(local({ env: {
+      GH_TOKEN: env.GH_TOKEN ?? env.GITHUB_TOKEN,
+      GITHUB_TOKEN: env.GITHUB_TOKEN ?? env.GH_TOKEN,
+    } }));
+    useResult(SkillResult);
+    useSkill(codeReview);
+    for (const persona of personas) useSubagent(persona);
+    for (const tool of docs?.tools ?? []) useTool(tool);
+    return 'Analyze the PR and return findings. Do not post a review; trusted workflow code handles posting.';
+  }
+  let runtime: Awaited<ReturnType<typeof start>> | undefined;
   try {
-    const harness = await init(agent, { tools: docs?.tools ?? [] });
-    const session = await harness.session();
+    runtime = await start({ agents: [ReviewAgent], env });
+    const handle = init(ReviewAgent);
+    const github = await githubIo(env);
 
     const stats: ReviewStats = { changedFiles: 999, additions: 1_000, deletions: 0 };
     if (targetRepo) {
       try {
-        const result = await harness.shell(reviewStatsCommand(prNumber, targetRepo), {
+        const result = await github.shell(reviewStatsCommand(prNumber, targetRepo), {
           signal: AbortSignal.timeout(30_000),
         });
         if (result.exitCode === 0) {
@@ -161,9 +137,7 @@ export async function run({ init, payload, env }: FlueContext) {
     let data: SkillResult;
 
     try {
-      ({ data } = await session.skill('code-review', {
-        signal: reviewSignal,
-        args: {
+      const receipt = await handle.dispatch(skillPrompt('code-review', {
           prNumber,
           repo: targetRepo,
           agentDir: cfg.agentDir,
@@ -171,24 +145,25 @@ export async function run({ init, payload, env }: FlueContext) {
           localConfigDir: cfg.localConfigDir,
           overrideMode: cfg.overrideMode,
           reviewBudget,
-        },
-        result: SkillResult,
-      }));
+        }));
+      try {
+        const reply = await handle.read(receipt, { signal: reviewSignal });
+        data = v.parse(SkillResult, reply.data.result?.at(-1));
+      } catch (error) {
+        if (reviewSignal.aborted) await handle.abort();
+        throw error;
+      }
     } catch (error) {
       if (!reviewSignal.aborted) throw error;
       data = timeoutReviewResult(reviewBudget.timeoutMs);
     }
 
     // Post deterministically from the structured result — the model doesn't post.
-    const posted = targetRepo ? await postReview(session, prNumber, targetRepo, renderReview(data)) : false;
+    const posted = targetRepo ? await postReview(github, prNumber, targetRepo, renderReview(data)) : false;
     if (!posted) console.error(`Failed to post review to ${targetRepo}#${prNumber}`);
 
     return { ...data, posted };
   } finally {
-    await docs?.close();
+    try { await runtime?.stop(); } finally { await docs?.close(); }
   }
 }
-
-// Internal-only: no public HTTP route. This agent is invoked from CI via
-// `flue run pr-review`. Delete this export to expose it over HTTP instead.
-export const route: WorkflowRouteHandler = async (_c, next) => next();

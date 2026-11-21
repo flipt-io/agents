@@ -96,7 +96,7 @@ The directory still uses the same shape (`prompts/`, `skills/`, `personas/`) as
 The composite action resolves this agents repo, installs dependencies, and runs:
 
 ```bash
-pnpm exec flue run issue-health --payload '{"issueNumber": 123, "repo": "owner/name"}'
+pnpm issue-health -- --payload '{"issueNumber": 123, "repo": "owner/name"}'
 ```
 
 It sets the `ISSUE_HEALTH_*` environment variables consumed by
@@ -142,7 +142,6 @@ the process environment, not from action inputs.
     model: anthropic/claude-sonnet-4-6
 ```
 
-Flue resolves both providers through pi-ai's built-in catalog; nothing needs
-registering in the agents repo's `app.ts` unless you add a provider pi-ai
-doesn't know. Locally, set `ISSUE_HEALTH_MODEL` plus that provider's
+Flue resolves both providers through pi-ai's built-in catalog. For a provider
+outside that catalog, register it in the workflow module before calling `start()`. Locally, set `ISSUE_HEALTH_MODEL` plus that provider's
 credentials in `.env`.

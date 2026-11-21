@@ -69,8 +69,8 @@ runs:
 
     - uses: actions/setup-node@v4
       with:
-        # Flue 0.11.1 requires Node >=22.18.0.
-        node-version: '22.18.0'
+        # Flue 2.3.1 requires Node >=22.19.0.
+        node-version: '22.19.0'
         # No setup-node pnpm cache: when this action is consumed from another
         # repo, the lockfile lives under _actions/ (outside the caller's
         # workspace), which setup-node's cache globber can't resolve. The
@@ -110,4 +110,4 @@ runs:
           }
           process.stdout.write(JSON.stringify({ issueNumber, repo: process.env.ISSUE_REPO }));
         ')
-        pnpm exec flue run issue-health --payload "$payload"
+        pnpm issue-health -- --payload "$payload"

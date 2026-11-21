@@ -109,7 +109,7 @@ The directory still uses the same shape (`prompts/`, `skills/`, `personas/`) as
 The action runs in the consuming repo's CI. `github.action_path` is the
 checked-out agents repo, so the agent's code, skills, and prompts come along for
 free at the pinned ref. The action installs deps, then runs
-`flue run pr-review`, passing the PR coordinates plus the paths to the central
+`pnpm review`, passing the PR coordinates plus the paths to the central
 config (`REVIEW_AGENT_DIR`), the consumer's checkout (`REVIEW_TARGET_DIR`), and
 the selected local override directory (`REVIEW_LOCAL_CONFIG_DIR`, defaulting to
 `.agents`). The `code-review` skill resolves the layered guidance, fetches the
@@ -152,8 +152,7 @@ as action inputs.
       model:     anthropic/claude-sonnet-4-6
   ```
 - **Another provider.** Anything in pi-ai's catalog works by id. For a provider
-  it doesn't know, register it with `registerProvider(...)` in the agents repo's
-  `app.ts`.
+  it doesn't know, register it in the workflow module before calling `start()`.
 
 Locally, set `REVIEW_MODEL` plus that provider's credentials in `.env`.
 

@@ -1,10 +1,11 @@
-import { defineAgentProfile } from '@flue/runtime';
+import { defineSubagent } from '@flue/runtime';
 
 // A focused correctness reviewer for logic-heavy diffs. Delegate with
-// `session.task(diff, { agent: 'correctness' })`.
-export const correctness = defineAgentProfile({
+// the model's task tool with agent: 'correctness'.
+export const correctness = defineSubagent({
   name: 'correctness',
-  instructions: [
+  description: 'Trace logic and edge cases for correctness.',
+  agent: () => [
     'You are a correctness reviewer. Trace the logic of the change as if you',
     'were the runtime. Look for off-by-one errors, null/undefined handling,',
     'wrong conditionals, broken error paths, race conditions, and unhandled edge',

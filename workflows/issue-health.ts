@@ -1,7 +1,8 @@
-import { createAgent, type FlueContext, type FlueSession, type WorkflowRouteHandler } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+import { init, useModel, useSandbox, useSkill } from '@flue/runtime';
+import { start, local } from '@flue/runtime/node';
 import path from 'node:path';
 import * as v from 'valibot';
+import { githubIo, skillPrompt, useResult, type GitHubIo, type WorkflowInput } from '../lib/runtime.ts';
 import { requireModel } from '../lib/model.ts';
 import {
   ISSUE_HEALTH_ISSUE_TYPES,
@@ -19,23 +20,7 @@ import {
 // ---------------------------------------------------------------------------
 // Global skills
 // ---------------------------------------------------------------------------
-import issueHealth from '../skills/issue-health/SKILL.md' with { type: 'skill' };
-
-const agent = createAgent((ctx) => ({
-  // Run against the checked-out host repo, but do not expose GitHub auth to the
-  // model-facing shell tools. Deterministic workflow code passes GitHub auth only
-  // to harness-level shell calls that are not available to the model.
-  sandbox: local(),
-  // No default model: ISSUE_HEALTH_MODEL must name a provider-qualified model
-  // (e.g. cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6), and that provider's
-  // credentials must be in the environment. In CI the composite action's
-  // `model` input sets it.
-  model: requireModel(ctx.env.ISSUE_HEALTH_MODEL, 'ISSUE_HEALTH_MODEL'),
-  thinkingLevel: 'low',
-  instructions:
-    'For issue-health skill calls, analyze only the supplied issue context. Do not run shell commands, call GitHub APIs, post comments, or apply labels; workflow code handles all GitHub IO deterministically.',
-  skills: [issueHealth],
-}));
+import issueHealth from '../skills/issue-health/SKILL.md';
 
 const PayloadSchema = v.object({
   issueNumber: v.number(),
@@ -107,9 +92,7 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-type GitHubIo = Pick<FlueSession, 'shell' | 'fs'>;
-
-async function fetchIssue(session: Pick<FlueSession, 'shell'>, issueNumber: number, repo: string): Promise<Issue> {
+async function fetchIssue(session: Pick<GitHubIo, 'shell'>, issueNumber: number, repo: string): Promise<Issue> {
   const fields = 'number,title,body,author,labels,url,state,createdAt,updatedAt';
   const { exitCode, stdout, stderr } = await session.shell(
     `gh issue view ${issueNumber} --repo ${shellQuote(repo)} --json ${fields}`,
@@ -122,68 +105,67 @@ async function fetchIssue(session: Pick<FlueSession, 'shell'>, issueNumber: numb
   return v.parse(IssueSchema, JSON.parse(stdout));
 }
 
-export async function run({ init, payload, env }: FlueContext) {
+export async function run({ payload, env }: WorkflowInput) {
+  const model = requireModel(env.ISSUE_HEALTH_MODEL, 'ISSUE_HEALTH_MODEL');
   const { issueNumber, repo } = v.parse(PayloadSchema, payload);
   const targetRepo = repo ?? env.GITHUB_REPOSITORY;
   if (!targetRepo) throw new Error('issue-health requires payload.repo or GITHUB_REPOSITORY');
 
   const cfg = resolveConfig(env);
-  const harness = await init(agent);
-  const session = await harness.session();
-  const githubEnv = {
-    GH_TOKEN: env.GH_TOKEN ?? env.GITHUB_TOKEN ?? '',
-    GITHUB_TOKEN: env.GITHUB_TOKEN ?? env.GH_TOKEN ?? '',
-  };
-  const github: GitHubIo = {
-    shell: (command, options) => harness.shell(command, { ...options, env: { ...githubEnv, ...options?.env } }),
-    fs: harness.fs,
-  };
-
+  function IssueHealthAgent() {
+    useModel(model, { thinkingLevel: 'low' });
+    useSandbox(local());
+    useResult(SkillResult);
+    useSkill(issueHealth);
+    return 'Analyze only supplied issue context. Do not run shell commands, call GitHub APIs, post comments, or apply labels; trusted workflow code handles GitHub IO.';
+  }
+  const github = await githubIo(env);
   const issue = await fetchIssue(github, issueNumber, targetRepo);
   const existingLabels = await fetchExistingIssueLabels(github, targetRepo);
   const currentLabels = issue.labels.map((label) => label.name);
 
-  const { data } = await session.skill('issue-health', {
-    args: {
-      repo: targetRepo,
-      issue: {
-        number: issue.number,
-        title: issue.title,
-        body: issue.body ?? '',
-        author: issue.author.login,
-        labels: currentLabels,
-        url: issue.url,
-        state: issue.state,
-        createdAt: issue.createdAt,
-        updatedAt: issue.updatedAt,
-      },
-      targetRepoLabels: existingLabels,
-      agentDir: cfg.agentDir,
-      targetDir: cfg.targetDir,
-      localConfigDir: cfg.localConfigDir,
-      overrideMode: cfg.overrideMode,
-    },
-    result: SkillResult,
-  });
+  const runtime = await start({ agents: [IssueHealthAgent], env });
+  try {
+    const handle = init(IssueHealthAgent);
+    const receipt = await handle.dispatch(skillPrompt('issue-health', {
+        repo: targetRepo,
+        issue: {
+          number: issue.number,
+          title: issue.title,
+          body: issue.body ?? '',
+          author: issue.author.login,
+          labels: currentLabels,
+          url: issue.url,
+          state: issue.state,
+          createdAt: issue.createdAt,
+          updatedAt: issue.updatedAt,
+        },
+        targetRepoLabels: existingLabels,
+        agentDir: cfg.agentDir,
+        targetDir: cfg.targetDir,
+        localConfigDir: cfg.localConfigDir,
+        overrideMode: cfg.overrideMode,
+    }));
+    const reply = await handle.read(receipt);
+    const data = v.parse(SkillResult, reply.data.result?.at(-1));
 
-  const commentPosted = shouldPostIssueHealthComment(cfg.commentMode, data)
-    ? await postIssueHealthComment(github, issueNumber, targetRepo, renderIssueHealthComment(data))
-    : false;
+    const commentPosted = shouldPostIssueHealthComment(cfg.commentMode, data)
+      ? await postIssueHealthComment(github, issueNumber, targetRepo, renderIssueHealthComment(data))
+      : false;
 
-  const labelResult = await applyIssueHealthLabels(github, issueNumber, targetRepo, data, existingLabels, {
-    labelMode: cfg.labelMode,
-  });
+    const labelResult = await applyIssueHealthLabels(github, issueNumber, targetRepo, data, existingLabels, {
+      labelMode: cfg.labelMode,
+    });
 
-  return {
-    issueType: data.issueType,
-    verdict: data.verdict,
-    score: data.score,
-    missingInfo: data.missingInfo,
-    labelsApplied: labelResult.applied ? labelResult.labels : [],
-    commentPosted,
-  };
+    return {
+      issueType: data.issueType,
+      verdict: data.verdict,
+      score: data.score,
+      missingInfo: data.missingInfo,
+      labelsApplied: labelResult.applied ? labelResult.labels : [],
+      commentPosted,
+    };
+  } finally {
+    await runtime.stop();
+  }
 }
-
-// Internal-only: no public HTTP route. This agent is invoked from CI via
-// `flue run issue-health`.
-export const route: WorkflowRouteHandler = async (_c, next) => next();

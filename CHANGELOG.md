@@ -49,6 +49,15 @@ refuses a tag that doesn't match `package.json`.
   pi-ai's catalog (`cloudflare-workers-ai/*`, `anthropic/*`, …) need no
   registration; anything else can be registered there.
 
+### Changed
+
+- Upgrade Flue from 0.11.1 to 2.3.1. Migrate both jobs to the standalone
+  Node API, with hook-based agents, validated result tools, and Vite builds.
+- Local runs use `pnpm review` and `pnpm issue-health`; the removed
+  `flue run <workflow> --payload` command is no longer supported.
+- Raise the Node minimum to 22.19.0. Both actions install that version.
+  Action inputs and provider credentials are unchanged.
+
 ### Added
 
 - Tagged releases. `Release` (`.github/workflows/release.yml`) validates a
