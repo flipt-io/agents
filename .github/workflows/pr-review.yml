@@ -25,4 +25,5 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          model: cloudflare-workers-ai/@cf/moonshotai/kimi-k2.6
+          # Kimi K2.6 was retired by Workers AI on 2026-11-20.
+          model: cloudflare-workers-ai/@cf/openai/gpt-oss-120b
