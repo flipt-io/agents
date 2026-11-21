@@ -1,10 +1,11 @@
-import { defineAgentProfile } from '@flue/runtime';
+import { defineSubagent } from '@flue/runtime';
 
 // A focused security reviewer. The main review agent can delegate a deep-dive
-// to this persona with `session.task(diff, { agent: 'security' })`.
-export const security = defineAgentProfile({
+// to this persona using the model's task tool with agent: 'security'.
+export const security = defineSubagent({
   name: 'security',
-  instructions: [
+  description: 'Review security risks and exploitable changes.',
+  agent: () => [
     'You are an application security reviewer. You only care about security.',
     'Hunt for: injection (SQL/shell/path/template), missing authZ on new',
     'endpoints, secrets/PII in code or logs, unsafe deserialization, SSRF, and',

@@ -23,7 +23,7 @@ test('release runs on semver tags and gates on the full validation suite', () =>
   assert.match(release, /tags:\n\s+- 'v\[0-9\]\+\.\[0-9\]\+\.\[0-9\]\+'/);
 
   // A tag is the only gate consumers get; none of these may be dropped.
-  for (const step of ['tsc --noEmit', 'node --test test/', 'pnpm build']) {
+  for (const step of ['tsc --noEmit', 'node --test test/*.test.mjs', 'pnpm build']) {
     assert.ok(release.includes(step), `release workflow must run \`${step}\``);
   }
 

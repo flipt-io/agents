@@ -1,4 +1,4 @@
-import type { FlueSession } from '@flue/runtime';
+import type { GitHubIo } from './runtime.ts';
 
 export const ISSUE_HEALTH_MARKER = '<!-- flipt-issue-health-agent -->';
 export const ISSUE_HEALTH_SUPPORT_FOOTER =
@@ -169,8 +169,8 @@ export function filterIssueHealthLabels(
   return labels;
 }
 
-type IssueHealthShell = Pick<FlueSession, 'shell'>;
-type IssueHealthShellFs = Pick<FlueSession, 'shell' | 'fs'>;
+type IssueHealthShell = Pick<GitHubIo, 'shell'>;
+type IssueHealthShellFs = Pick<GitHubIo, 'shell' | 'fs'>;
 
 export async function fetchExistingIssueLabels(session: IssueHealthShell, repo: string): Promise<string[]> {
   const { exitCode, stdout } = await session.shell(

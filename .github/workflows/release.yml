@@ -34,8 +34,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # Flue 0.11.1 requires Node >=22.18.0.
-          node-version: '22.18.0'
+          # Flue 2.3.1 requires Node >=22.19.0.
+          node-version: '22.19.0'
           cache: pnpm
 
       - name: Install dependencies
@@ -47,7 +47,7 @@ jobs:
         run: npx -p typescript tsc --noEmit -p tsconfig.json
 
       - name: Test
-        run: node --test test/
+        run: node --test test/*.test.mjs
 
       - name: Build
         run: pnpm build
@@ -60,7 +60,7 @@ jobs:
         run: |
           declared="v$(node -p 'require("./package.json").version')"
           if [ "$declared" != "$TAG" ]; then
-            echo "package.json version ($declared) does not match tag ($TAG)." >&2
+            echo "Version mismatch: package.json=$declared, tag=$TAG" >&2
             echo 'Bump package.json and re-tag.' >&2
             exit 1
           fi
@@ -80,4 +80,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+        run: >-
+          gh release create "$TAG" --title "$TAG"
+          --generate-notes --verify-tag

@@ -7,7 +7,7 @@ organization. It's one pnpm-workspace monorepo: each agent is a workflow in
 skills / prompts / personas.
 
 The current agents are **PR Review** and **Issue Health Check**. Local builds and
-runs require Node 22.18.0 or newer (the Flue 0.11.1 runtime floor) and pnpm.
+runs require Node 22.19.0 or newer (the Flue 2.3.1 runtime floor) and pnpm.
 
 ## Agents
 
@@ -40,7 +40,7 @@ agents/                       # pnpm workspace root — a fleet of agents
     consumer-workflow.yml     # copy-paste workflows for consuming repos
     issue-health-workflow.yml
     sample-consumer/.agents/  # example per-repo overrides
-  app.ts                      # runtime entry (register extra model providers here)
+  app.ts                      # HTTP entry (no agent routes exposed)
   flue.config.ts              # default target (node)
   .github/workflows/
     pr-review.yml             # dogfoods the action on this repo's PRs
@@ -50,13 +50,12 @@ agents/                       # pnpm workspace root — a fleet of agents
 
 Every agent here is assembled the same way — PR Review is the worked example:
 
-- **Skills** are registered on the agent in `createAgent({ skills: [...] })`, so
-  they are part of the agent, not the payload. Add one: drop
-  `skills/<name>/SKILL.md`, import it in `workflows/pr-review.ts`, add it to the
-  `skills` array.
+- **Skills** are mounted with `useSkill()`, so they are part of the agent,
+  not the payload. Add one: create `skills/<name>/SKILL.md`, import it in
+  `workflows/pr-review.ts`, and mount it in the agent function.
 - **Prompts** in `prompts/*.md` are read by the `code-review` skill on every run
   (filename order). Drop a file in — it applies to the next PR, no code change.
-- **Personas** in `personas/*.ts` are registered as `subagents`, so the reviewer
+- **Personas** in `personas/*.ts` are mounted with `useSubagent()`, so the reviewer
   can delegate focused deep-dives (`security`, `correctness`, …) on any PR.
 - **The reviewer's persona and standing rules** live in
   `skills/code-review/SKILL.md` — that skill *is* the agent's behavior.
@@ -68,9 +67,9 @@ Every agent here is assembled the same way — PR Review is the worked example:
   Skills only *analyze* and return structured data; workflows render comments,
   post them with `gh`, and apply any labels from deterministic code paths.
   (Smaller models can't be trusted to reliably run mutation steps.)
-- **MCP tools** can be attached at runtime: `connectMcpServer(url)`, then pass
-  the connection's `tools` to `init(agent, { tools })`. PR Review connects the
-  Flipt docs MCP so it can ground reviews in the documentation.
+- **MCP tools** can be attached at runtime with `createMcpConnection()` and
+  mounted with `useTool()`. PR Review connects the Flipt docs MCP so it can
+  ground reviews in the documentation.
 
 The payload only ever carries *which artifact* to inspect (for example
 `prNumber` or `issueNumber`, plus optional `repo`) — never the skills or
@@ -78,9 +77,9 @@ prompts.
 
 ## Subagents / personas
 
-Flue supports subagents via `defineAgentProfile({ name, instructions })`,
-registered in `createAgent({ subagents: [...] })` and invoked with
-`session.task(text, { agent: 'name' })`. There is no markdown auto-discovery for
+Flue supports subagents via `defineSubagent({ name, description, agent })`,
+mounted with `useSubagent()` and invoked by the model's `task` tool.
+There is no markdown auto-discovery for
 personas (that exists only for skills), so each persona is a small TS module in
 `personas/` exported through `personas/index.ts`. Add one and add it to that
 array.
@@ -105,7 +104,7 @@ Neither needs an `app.ts` change: Flue resolves both through pi-ai's built-in
 catalog. Reasoning models work over `cloudflare-workers-ai/*` because the
 `openai-completions` adapter sends `max_completion_tokens` automatically when
 the catalog marks a model as reasoning-capable. To use a provider pi-ai doesn't
-know, register it in `app.ts`. See
+know, register it in the workflow module before calling `start()`. See
 [`actions/pr-review/README.md`](actions/pr-review/README.md#models).
 
 ## Versioning
@@ -195,11 +194,11 @@ agent, not just this one. The `override-mode` input controls whether those
 ```bash
 cp .env.example .env        # REVIEW_MODEL + its provider creds, GH_TOKEN for gh
 pnpm install
-pnpm exec flue run pr-review --payload '{"prNumber": 123, "repo": "owner/name"}'
+pnpm review -- --payload '{"prNumber": 123, "repo": "owner/name"}'
 ```
 
-`flue run` builds the project, invokes the workflow, and prints the structured
-verdict as JSON.
+`pnpm review` loads the workflow through Vite, runs it with Flue's standalone
+Node API, and prints the structured verdict as JSON.
 
 ## The Issue Health Check agent
 
@@ -266,19 +265,18 @@ pnpm install
 pnpm issue-health -- --payload '{"issueNumber":123,"repo":"owner/name"}'
 ```
 
-`pnpm issue-health` runs the `flue run issue-health` package script, fetches the
+`pnpm issue-health` runs the standalone Node workflow, fetches the
 issue from `repo`, posts according to `ISSUE_HEALTH_COMMENT_MODE` (default
 `always`), applies labels according to `ISSUE_HEALTH_LABEL_MODE` (default
 `existing-only`), and prints the structured result as JSON.
 
 ## Adding an agent
 
-Add `workflows/<name>.ts` — it shares everything above: the runtime entry in
-`app.ts`, required model selection via `requireModel(ctx.env.<NAME>_MODEL, …)`,
-and the skills / prompts / personas patterns. Give it its own skill(s) under `skills/`, prompt guidance under
-`prompts/`, and personas under `personas/` as needed, then register them on the
-agent. Run it with `flue run <name>`, and (if it should be consumable by other
-repos) add an action under `actions/<name>/`.
+Add a synchronous agent function using Flue's hooks and a deterministic job
+under `workflows/<name>.ts`. Select the model with `requireModel`, mount skills
+with `useSkill`, and keep GitHub writes outside the model. Add the job to
+`scripts/run.mjs` and give it a package script. If other repositories need it,
+add an action under `actions/<name>/`. `app.ts` deliberately exposes no HTTP routes.
 
 For independent builds/deploys, promote an agent into its own package under
 `packages/*` and list it in `pnpm-workspace.yaml`.

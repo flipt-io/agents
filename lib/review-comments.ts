@@ -1,4 +1,4 @@
-import type { FlueSession } from '@flue/runtime';
+import type { GitHubIo } from './runtime.ts';
 
 export const REVIEW_MARKER = '<!-- flipt-pr-review-agent -->';
 export const REVIEW_FOOTER = '_🤖 Automated review by the Flipt [PR review agent](https://github.com/flipt-io/agents)._';
@@ -89,7 +89,7 @@ export function renderReview(r: ReviewResult): string {
 }
 
 async function fetchExistingReviewTarget(
-  session: FlueSession,
+  session: GitHubIo,
   prNumber: number,
   repo: string,
 ): Promise<ExistingReviewTarget | undefined> {
@@ -111,7 +111,7 @@ async function fetchExistingReviewTarget(
 }
 
 async function updateExistingReview(
-  session: FlueSession,
+  session: GitHubIo,
   prNumber: number,
   repo: string,
   target: ExistingReviewTarget,
@@ -132,7 +132,7 @@ async function updateExistingReview(
 }
 
 export async function postReview(
-  session: FlueSession,
+  session: GitHubIo,
   prNumber: number,
   repo: string,
   body: string,

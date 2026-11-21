@@ -5,20 +5,23 @@
   "type": "module",
   "description": "Flue code-review agent. Reviews pull requests and scores new issues using globally-configured skills and prompts.",
   "scripts": {
-    "dev": "flue dev",
-    "build": "flue build",
-    "review": "flue run pr-review",
-    "issue-health": "flue run issue-health"
+    "dev": "vite dev",
+    "build": "vite build",
+    "review": "node scripts/run.mjs pr-review",
+    "issue-health": "node scripts/run.mjs issue-health"
   },
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=22.19.0"
   },
   "dependencies": {
-    "@flue/runtime": "^0.11.1",
+    "@flue/runtime": "2.3.1",
+    "hono": "^4.13.19",
     "valibot": "^1.4.1"
   },
   "devDependencies": {
-    "@flue/cli": "^0.11.1",
-    "@types/node": "^25.9.1"
+    "@flue/cli": "2.3.1",
+    "@flue/vite": "2.3.1",
+    "@types/node": "^25.9.1",
+    "vite": "^8.3.8"
   }
 }
