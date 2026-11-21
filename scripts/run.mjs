@@ -1,5 +1,6 @@
 import { parseArgs } from 'node:util';
-import { createServer, loadEnv } from 'vite';
+import { loadEnv } from 'vite';
+import { createWorkflowModuleServer } from './module-server.mjs';
 
 // Keep deterministic GitHub IO outside the model. Flue 2's CLI runs a single
 // model conversation, so these multi-step jobs use the standalone JS API.
@@ -17,7 +18,7 @@ const payload = JSON.parse(values.payload);
 for (const [key, value] of Object.entries(loadEnv('development', process.cwd(), ''))) {
   if (process.env[key] === undefined) process.env[key] = value;
 }
-const server = await createServer({ server: { middlewareMode: true } });
+const server = await createWorkflowModuleServer();
 try {
   const { run } = await server.ssrLoadModule(`/workflows/${name}.ts`);
   console.log(JSON.stringify(await run({ payload, env: process.env })));

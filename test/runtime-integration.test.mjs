@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createServer } from 'vite';
+import { createWorkflowModuleServer } from '../scripts/module-server.mjs';
 import { init, useModel, useSkill, useSandbox } from '@flue/runtime';
 import { start, local } from '@flue/runtime/node';
 import * as v from 'valibot';
@@ -9,7 +9,10 @@ import * as v from 'valibot';
 const pi = await import(new URL('../../../@earendil-works/pi-ai/dist/index.js', import.meta.resolve('@flue/runtime')));
 
 test('real runtime mounts hooks, validates submit_result, and aborts running work', { timeout: 15000 }, async () => {
-  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+  const server = await createWorkflowModuleServer();
+  // Give asynchronous dev-server bootstrap time to run if the loader ever
+  // regresses to loading the project's flue() Vite plugin.
+  await new Promise(resolve => setTimeout(resolve, 250));
   let runtime;
   try {
     const { useResult, skillPrompt } = await server.ssrLoadModule('./lib/runtime.ts');
