@@ -15,21 +15,21 @@ importers:
         specifier: ^4.13.19
         version: 4.13.19
       valibot:
-        specifier: ^1.4.1
-        version: 1.4.1
+        specifier: ^1.5.0
+        version: 1.5.0
     devDependencies:
       '@flue/cli':
         specifier: 2.3.1
-        version: 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(@types/node@25.9.1)(esbuild@0.28.1)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(ws@8.21.0)(yaml@2.9.0)(zod@4.4.3)
+        version: 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(@types/node@25.9.9)(esbuild@0.28.1)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(ws@8.21.0)(yaml@2.9.0)(zod@4.4.3)
       '@flue/vite':
         specifier: 2.3.1
-        version: 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)
+        version: 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)
       '@types/node':
-        specifier: ^25.9.1
-        version: 25.9.1
+        specifier: ^25.9.9
+        version: 25.9.9
       vite:
         specifier: ^8.3.8
-        version: 8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0)
+        version: 8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0)
 
 packages:
 
@@ -482,9 +482,6 @@ packages:
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
     engines: {node: '>=6.0.0'}
 
-  '@jridgewell/sourcemap-codec@1.5.5':
-    resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
-
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
 
@@ -731,8 +728,8 @@ packages:
   '@types/jsesc@2.5.1':
     resolution: {integrity: sha512-9VN+6yxLOPLOav+7PwjZbxiID2bVaeq0ED4qSQmdQTdjnXJSaCVKTR58t15oqH1H5t8Ng2ZX1SabJVoN9Q34bw==}
 
-  '@types/node@25.9.1':
-    resolution: {integrity: sha512-xfrlY7UD5rMJk3ZVJP8BNzS28J36YJg+xp+LPXV1TdWxr8uMH5A860QNxYDGQe/ylDSgjxE52Q9VnO7p75tJxg==}
+  '@types/node@25.9.9':
+    resolution: {integrity: sha512-b4e2xxj/yMeT2hNlD6x7zNFiQK2Dlmkb9CQ6v3/1G2RezKN4YS2lcEv8lzGm1mhs4f2lM4yNAMI/zUDBZBBt7w==}
 
   '@types/retry@0.12.0':
     resolution: {integrity: sha512-wWKOClTTiizcZhXnPY4wikVAwmdYHp8q6DmC+EJUzAMsycb7HB32Kh9RN4+0gExjmPmZSAQjgURXIGATPegAvA==}
@@ -798,11 +795,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
@@ -1811,8 +1803,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  valibot@1.4.1:
-    resolution: {integrity: sha512-klCmFTz2jeDluy9RwX+F884TCiogtdBJ/YaxSx1EOBYXa3NXNWj8kR1jjN8rzluwojJVWWaHJ4r1U5LfICnM3g==}
+  valibot@1.5.0:
+    resolution: {integrity: sha512-nil6AkP2TChWL43Z5uJ6GTxX01CUA+g8LWUM+N/rB9NBbkUMaUsi9PUNzlUPgoKASgmx9f7eGOYpJ04/fSa6FQ==}
     peerDependencies:
       typescript: '>=5'
     peerDependenciesMeta:
@@ -2407,17 +2399,17 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@flue/cli@2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(@types/node@25.9.1)(esbuild@0.28.1)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(ws@8.21.0)(yaml@2.9.0)(zod@4.4.3)':
+  '@flue/cli@2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(@types/node@25.9.9)(esbuild@0.28.1)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(ws@8.21.0)(yaml@2.9.0)(zod@4.4.3)':
     dependencies:
       '@flue/runtime': 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(supports-color@10.2.2)(undici@7.28.0)(ws@8.21.0)(zod@4.4.3)
-      '@flue/vite': 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)
+      '@flue/vite': 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)
       '@vercel/detect-agent': 1.2.3
       cac: 7.1.0
       minisearch: 7.2.0
       picocolors: 1.1.1
       prompts: 2.4.2
       ulidx: 2.4.1
-      vite: 8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0)
+      vite: 8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0)
     transitivePeerDependencies:
       - '@ai-sdk/react'
       - '@aws-sdk/credential-provider-node'
@@ -2468,12 +2460,12 @@ snapshots:
       '@earendil-works/pi-ai': 1.6.0(@aws-sdk/credential-provider-node@3.972.97)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(supports-color@10.2.2)(undici@7.28.0)(ws@8.21.0)(zod@4.4.3)
       '@hono/node-server': 2.0.4(hono@4.13.19)
       '@modelcontextprotocol/client': 2.0.0
-      '@valibot/to-json-schema': 1.7.0(valibot@1.4.1)
+      '@valibot/to-json-schema': 1.7.0(valibot@1.5.0)
       hono: 4.13.19
       js-yaml: 5.5.0
       typebox: 1.4.7
       ulidx: 2.4.1
-      valibot: 1.4.1
+      valibot: 1.5.0
     transitivePeerDependencies:
       - '@aws-sdk/credential-provider-node'
       - '@modelcontextprotocol/sdk'
@@ -2489,15 +2481,15 @@ snapshots:
       - ws
       - zod
 
-  '@flue/vite@2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)':
+  '@flue/vite@2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(hono@4.13.19)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(supports-color@10.2.2)(undici@7.28.0)(vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)':
     dependencies:
       '@flue/runtime': 2.3.1(@aws-sdk/credential-provider-node@3.972.97)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@smithy/signature-v4@5.7.5)(google-auth-library@10.6.2(supports-color@10.2.2))(supports-color@10.2.2)(undici@7.28.0)(ws@8.21.0)(zod@4.4.3)
       '@hono/node-server': 2.0.4(hono@4.13.19)
-      agents: 0.20.1(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0))(zod@4.4.3)
+      agents: 0.20.1(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0))(zod@4.4.3)
       magic-string: 1.4.5
       tinyglobby: 0.2.16
       ulidx: 2.4.1
-      vite: 8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0)
+      vite: 8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0)
     transitivePeerDependencies:
       - '@ai-sdk/react'
       - '@aws-sdk/credential-provider-node'
@@ -2581,14 +2573,12 @@ snapshots:
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
-  '@jridgewell/sourcemap-codec@1.5.5': {}
-
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
   '@jridgewell/trace-mapping@0.3.31':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
 
   '@mixmark-io/domino@2.2.0':
     optional: true
@@ -2728,14 +2718,14 @@ snapshots:
   '@rolldown/binding-win32-x64-msvc@1.2.19':
     optional: true
 
-  '@rolldown/plugin-babel@0.2.4(@babel/core@8.1.2)(@babel/runtime@7.29.7)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0))':
+  '@rolldown/plugin-babel@0.2.4(@babel/core@8.1.2)(@babel/runtime@7.29.7)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0))':
     dependencies:
       '@babel/core': 8.1.2
       picomatch: 4.0.7
       rolldown: 1.2.19
     optionalDependencies:
       '@babel/runtime': 7.29.7
-      vite: 8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0)
+      vite: 8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0)
 
   '@rolldown/pluginutils@1.0.1': {}
 
@@ -2800,15 +2790,15 @@ snapshots:
 
   '@types/jsesc@2.5.1': {}
 
-  '@types/node@25.9.1':
+  '@types/node@25.9.9':
     dependencies:
       undici-types: 7.24.6
 
   '@types/retry@0.12.0': {}
 
-  '@valibot/to-json-schema@1.7.0(valibot@1.4.1)':
+  '@valibot/to-json-schema@1.7.0(valibot@1.5.0)':
     dependencies:
-      valibot: 1.4.1
+      valibot: 1.5.0
 
   '@vercel/detect-agent@1.2.3': {}
 
@@ -2821,14 +2811,14 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  agents@0.20.1(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0))(zod@4.4.3):
+  agents@0.20.1(@babel/core@8.1.2)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20261120.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.0.1(supports-color@10.2.2))(react@19.3.1)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0))(zod@4.4.3):
     dependencies:
       '@babel/plugin-proposal-decorators': 8.0.2(@babel/core@8.1.2)
       '@cfworker/json-schema': 4.1.6
       '@modelcontextprotocol/client': 2.0.0
       '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.6)(supports-color@10.2.2)(zod@4.4.3)
       '@modelcontextprotocol/server': 2.0.0
-      '@rolldown/plugin-babel': 0.2.4(@babel/core@8.1.2)(@babel/runtime@7.29.7)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0))
+      '@rolldown/plugin-babel': 0.2.4(@babel/core@8.1.2)(@babel/runtime@7.29.7)(rolldown@1.2.19)(vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0))
       cron-schedule: 6.0.0
       esbuild: 0.28.1
       mimetext: 3.0.28
@@ -2841,7 +2831,7 @@ snapshots:
       zod: 4.4.3
     optionalDependencies:
       just-bash: 3.0.1(supports-color@10.2.2)
-      vite: 8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0)
+      vite: 8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0)
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/plugin-transform-runtime'
@@ -3616,7 +3606,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.1
-      '@types/node': 25.9.1
+      '@types/node': 25.9.9
       long: 5.3.2
 
   proxy-addr@2.0.7:
@@ -3933,13 +3923,13 @@ snapshots:
   util-deprecate@1.0.2:
     optional: true
 
-  valibot@1.4.1: {}
+  valibot@1.5.0: {}
 
   vary@1.1.2: {}
 
   verkit@0.5.0: {}
 
-  vite@8.3.8(@types/node@25.9.1)(esbuild@0.28.1)(yaml@2.9.0):
+  vite@8.3.8(@types/node@25.9.9)(esbuild@0.28.1)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -3947,7 +3937,7 @@ snapshots:
       rolldown: 1.2.19
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 25.9.1
+      '@types/node': 25.9.9
       esbuild: 0.28.1
       fsevents: 2.3.3
       yaml: 2.9.0
